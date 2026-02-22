@@ -33,8 +33,6 @@ services:
       PORT: 3000
     ports:
       - "${APP_PORT:-3000}:3000"
-    profiles:
-      - full
 
 volumes:
   # Named volume — Docker manages the location.
