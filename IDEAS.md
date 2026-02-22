@@ -4,6 +4,26 @@ Parking lot for features to build later. Not prioritized.
 
 ---
 
+## Monthly budget report
+
+A beginning-of-month report that analyzes the prior month and suggests budget amounts for the coming month.
+
+**What it would do:**
+- Look at actual spending per budget over the last 3–6 months
+- Factor in income trends
+- Suggest budget limits for each category (e.g. "You averaged $520 on Groceries over the last 3 months — suggested limit: $500")
+- Flag categories that are consistently over budget
+- Highlight areas where you could trim to hit a savings rate target
+
+**Implementation options:**
+- **LLM-generated** — add a `generate_monthly_report(month)` tool that calls `getMonthlyBudgetSpending` + `getMonthlyOverview` and asks Claude to reason over the data and produce recommendations. No new schema needed.
+- **Dedicated page** — a `/report` page in the UI that auto-runs at the start of each month, or has a "Generate Report" button
+- **Scheduled email/notification** — cron job on the 1st of the month that generates and stores the report
+
+**Easiest starting point:** Add a "Generate monthly report" button to the Q&A console or dashboard that pre-fills the question and triggers the LLM. All the data is already available via existing tools.
+
+---
+
 ## Pay stub tracking
 
 **Problem:** The system only sees net pay hitting the bank. Everything that happens before that — taxes, 401k, HSA — is invisible. This means:
