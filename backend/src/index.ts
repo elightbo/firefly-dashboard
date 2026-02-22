@@ -2,6 +2,7 @@ import 'dotenv/config';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
 import { existsSync } from 'fs';
+import { migrate } from 'drizzle-orm/node-postgres/migrator';
 import Fastify from 'fastify';
 import cors from '@fastify/cors';
 import staticFiles from '@fastify/static';
@@ -14,6 +15,10 @@ import { chatRoutes } from './routes/chat.js';
 import { runSync } from './sync/index.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
+
+// Run migrations on startup — no-op if already applied.
+import { db } from './db/index.js';
+await migrate(db, { migrationsFolder: join(__dirname, '..', 'drizzle') });
 
 const app = Fastify({ logger: true });
 
