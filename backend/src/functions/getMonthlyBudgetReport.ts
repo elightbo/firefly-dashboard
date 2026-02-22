@@ -24,8 +24,8 @@ export interface MonthlyBudgetReportResult {
 
 function suggestLimit(avgSpend: number): number {
   if (avgSpend === 0) return 0;
-  // 10% buffer, rounded up to nearest $25
-  return Math.ceil((avgSpend * 1.1) / 25) * 25;
+  // Round up to nearest $25 — no buffer
+  return Math.ceil(avgSpend / 25) * 25;
 }
 
 function monthLabel(yyyyMM: string): string {
