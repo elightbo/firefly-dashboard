@@ -12,10 +12,15 @@ import type {
   Period,
 } from '@/types'
 
+export interface AuthUser {
+  id: number
+  username: string
+}
+
 export const api = createApi({
   reducerPath: 'api',
   baseQuery: fetchBaseQuery({ baseUrl: '/api' }),
-  tagTypes: ['FinancialData'],
+  tagTypes: ['FinancialData', 'Auth'],
   endpoints: (builder) => ({
     getNetWorth: builder.query<NetWorthResult, void>({
       query: () => '/functions/net-worth',
@@ -61,6 +66,44 @@ export const api = createApi({
         body: { question },
       }),
     }),
+    getMe: builder.query<AuthUser, void>({
+      query: () => '/auth/me',
+      providesTags: ['Auth'],
+    }),
+    login: builder.mutation<AuthUser, { username: string; password: string }>({
+      query: (credentials) => ({
+        url: '/auth/login',
+        method: 'POST',
+        body: credentials,
+      }),
+      invalidatesTags: ['Auth'],
+    }),
+    logout: builder.mutation<{ ok: boolean }, void>({
+      query: () => ({
+        url: '/auth/logout',
+        method: 'POST',
+      }),
+      invalidatesTags: ['Auth', 'FinancialData'],
+    }),
+    getUsers: builder.query<Array<{ id: number; username: string; createdAt: string }>, void>({
+      query: () => '/admin/users',
+      providesTags: ['Auth'],
+    }),
+    createUser: builder.mutation<AuthUser, { username: string; password: string }>({
+      query: (body) => ({
+        url: '/admin/users',
+        method: 'POST',
+        body,
+      }),
+      invalidatesTags: ['Auth'],
+    }),
+    deleteUser: builder.mutation<{ ok: boolean }, number>({
+      query: (id) => ({
+        url: `/admin/users/${id}`,
+        method: 'DELETE',
+      }),
+      invalidatesTags: ['Auth'],
+    }),
   }),
 })
 
@@ -74,4 +117,10 @@ export const {
   useGetMonthlyBudgetSpendingQuery,
   useGetMonthlyBudgetReportQuery,
   useChatMutation,
+  useGetMeQuery,
+  useLoginMutation,
+  useLogoutMutation,
+  useGetUsersQuery,
+  useCreateUserMutation,
+  useDeleteUserMutation,
 } = api

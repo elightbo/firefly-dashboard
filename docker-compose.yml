@@ -30,6 +30,8 @@ services:
       FIREFLY_TOKEN: ${FIREFLY_TOKEN}
       ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY}
       CLAUDE_MODEL: ${CLAUDE_MODEL:-claude-sonnet-4-6}
+      JWT_SECRET: ${JWT_SECRET}
+      NODE_ENV: production
       PORT: 3000
     ports:
       - "${APP_PORT:-3000}:3000"

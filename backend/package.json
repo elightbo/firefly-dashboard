@@ -13,10 +13,13 @@
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.78.0",
+    "@fastify/cookie": "^11.0.2",
     "@fastify/cors": "^11.2.0",
+    "@fastify/jwt": "^10.0.0",
     "@fastify/static": "^9.0.0",
     "@fastify/swagger": "^9.7.0",
     "@scalar/fastify-api-reference": "^1.44.25",
+    "bcryptjs": "^3.0.3",
     "dotenv": "^16.4.7",
     "drizzle-orm": "^0.38.4",
     "fastify": "^5.2.1",
@@ -24,6 +27,7 @@
     "pg": "^8.13.3"
   },
   "devDependencies": {
+    "@types/bcryptjs": "^3.0.0",
     "@types/node": "^22.13.4",
     "@types/node-cron": "^3.0.11",
     "@types/pg": "^8.11.11",

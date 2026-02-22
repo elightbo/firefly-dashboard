@@ -6,6 +6,7 @@ import {
   timestamp,
   boolean,
   serial,
+  uniqueIndex,
 } from 'drizzle-orm/pg-core';
 
 // ---------------------------------------------------------------------------
@@ -59,6 +60,18 @@ export const memories = pgTable('memories', {
   content: text('content').notNull(),
   createdAt: timestamp('created_at').notNull().defaultNow(),
 });
+
+// ---------------------------------------------------------------------------
+// Users — local authentication
+// ---------------------------------------------------------------------------
+export const users = pgTable('users', {
+  id:           serial('id').primaryKey(),
+  username:     text('username').notNull(),
+  passwordHash: text('password_hash').notNull(),
+  createdAt:    timestamp('created_at').notNull().defaultNow(),
+}, (table) => ({
+  usernameIdx: uniqueIndex('users_username_idx').on(table.username),
+}));
 
 // ---------------------------------------------------------------------------
 // Budgets

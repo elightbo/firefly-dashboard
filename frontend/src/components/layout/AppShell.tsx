@@ -1,9 +1,9 @@
-import { NavLink, Outlet } from 'react-router-dom'
-import { LayoutDashboard, MessageSquare, TrendingUp, RefreshCw, ClipboardList } from 'lucide-react'
+import { NavLink, Outlet, useNavigate } from 'react-router-dom'
+import { LayoutDashboard, MessageSquare, TrendingUp, RefreshCw, ClipboardList, LogOut, Settings } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useState } from 'react'
 import { useDispatch } from 'react-redux'
-import { api } from '@/store/api'
+import { api, useGetMeQuery, useLogoutMutation } from '@/store/api'
 
 const navItems = [
   { to: '/', label: 'Dashboard', icon: LayoutDashboard },
@@ -15,6 +15,9 @@ const navItems = [
 export function AppShell() {
   const [syncing, setSyncing] = useState(false)
   const dispatch = useDispatch()
+  const navigate = useNavigate()
+  const { data: me } = useGetMeQuery()
+  const [logout] = useLogoutMutation()
 
   async function handleSync() {
     setSyncing(true)
@@ -24,6 +27,11 @@ export function AppShell() {
     } finally {
       setSyncing(false)
     }
+  }
+
+  async function handleLogout() {
+    await logout()
+    navigate('/login', { replace: true })
   }
 
   return (
@@ -52,14 +60,41 @@ export function AppShell() {
             ))}
           </nav>
         </div>
-        <button
-          onClick={handleSync}
-          disabled={syncing}
-          className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm text-muted-foreground hover:text-foreground hover:bg-muted transition-colors disabled:opacity-50"
-        >
-          <RefreshCw className={cn('h-4 w-4', syncing && 'animate-spin')} />
-          {syncing ? 'Syncing…' : 'Sync'}
-        </button>
+        <div className="flex items-center gap-2">
+          {me && (
+            <span className="text-sm text-muted-foreground">{me.username}</span>
+          )}
+          <NavLink
+            to="/settings"
+            className={({ isActive }) =>
+              cn(
+                'flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm transition-colors',
+                isActive
+                  ? 'bg-primary text-primary-foreground'
+                  : 'text-muted-foreground hover:text-foreground hover:bg-muted',
+              )
+            }
+            title="Settings"
+          >
+            <Settings className="h-4 w-4" />
+          </NavLink>
+          <button
+            onClick={handleSync}
+            disabled={syncing}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm text-muted-foreground hover:text-foreground hover:bg-muted transition-colors disabled:opacity-50"
+          >
+            <RefreshCw className={cn('h-4 w-4', syncing && 'animate-spin')} />
+            {syncing ? 'Syncing…' : 'Sync'}
+          </button>
+          <button
+            onClick={handleLogout}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+            title="Sign out"
+          >
+            <LogOut className="h-4 w-4" />
+            Sign out
+          </button>
+        </div>
       </header>
       <main className="p-6">
         <Outlet />

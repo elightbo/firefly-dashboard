@@ -9,9 +9,13 @@ import staticFiles from '@fastify/static';
 import swagger from '@fastify/swagger';
 import scalarReference from '@scalar/fastify-api-reference';
 import cron from 'node-cron';
+import cookie from '@fastify/cookie';
+import jwt from '@fastify/jwt';
 import { syncRoutes } from './routes/sync.js';
 import { functionRoutes } from './routes/functions.js';
 import { chatRoutes } from './routes/chat.js';
+import { authRoutes } from './routes/auth.js';
+import { adminRoutes } from './routes/admin.js';
 import { runSync } from './sync/index.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -38,29 +42,37 @@ app.addContentTypeParser('application/json', { parseAs: 'string' }, (_req, body,
 
 await app.register(cors, { origin: true });
 
-await app.register(swagger, {
-  openapi: {
-    info: {
-      title: 'Budget API',
-      description: 'Firefly III AI Personal Reporting System — local reporting and sync backend.',
-      version: '0.1.0',
-    },
-    tags: [
-      { name: 'Sync', description: 'Firefly III data sync operations' },
-      { name: 'Functions', description: 'Whitelisted reporting functions' },
-      { name: 'Chat', description: 'Natural language Q&A powered by Claude' },
-      { name: 'Health', description: 'Server health' },
-    ],
-  },
+await app.register(cookie);
+await app.register(jwt, {
+  secret: process.env.JWT_SECRET!,
+  cookie: { cookieName: 'session', signed: false },
 });
 
-await app.register(scalarReference, {
-  routePrefix: '/documentation',
-  configuration: {
-    title: 'Budget API',
-    theme: 'saturn',
-  },
-});
+if (process.env.NODE_ENV !== 'production') {
+  await app.register(swagger, {
+    openapi: {
+      info: {
+        title: 'Budget API',
+        description: 'Firefly III AI Personal Reporting System — local reporting and sync backend.',
+        version: '0.1.0',
+      },
+      tags: [
+        { name: 'Sync', description: 'Firefly III data sync operations' },
+        { name: 'Functions', description: 'Whitelisted reporting functions' },
+        { name: 'Chat', description: 'Natural language Q&A powered by Claude' },
+        { name: 'Health', description: 'Server health' },
+      ],
+    },
+  });
+
+  await app.register(scalarReference, {
+    routePrefix: '/documentation',
+    configuration: {
+      title: 'Budget API',
+      theme: 'saturn',
+    },
+  });
+}
 
 app.get('/health', {
   schema: {
@@ -75,9 +87,27 @@ app.get('/health', {
   },
 }, async () => ({ status: 'ok' }));
 
+await app.register(authRoutes, { prefix: '/api' });
+
+// Protect all data routes — require a valid session cookie.
+app.addHook('preHandler', async (req, reply) => {
+  const isProtected =
+    req.url.startsWith('/api/functions') ||
+    req.url.startsWith('/api/sync') ||
+    req.url.startsWith('/api/chat') ||
+    req.url.startsWith('/api/admin');
+  if (!isProtected) return;
+  try {
+    await req.jwtVerify({ onlyCookie: true });
+  } catch {
+    return reply.code(401).send({ error: 'Not authenticated' });
+  }
+});
+
 await app.register(syncRoutes, { prefix: '/api' });
 await app.register(functionRoutes, { prefix: '/api' });
 await app.register(chatRoutes, { prefix: '/api' });
+await app.register(adminRoutes, { prefix: '/api' });
 
 // Serve the built frontend in production (when ./public exists).
 const publicDir = join(__dirname, '..', 'public');
