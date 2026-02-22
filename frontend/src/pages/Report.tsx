@@ -47,11 +47,26 @@ export function Report() {
   const [analysis, setAnalysis] = useState<string | null>(null)
 
   async function handleAnalysis() {
-    const result = await chat(
-      'Generate a monthly budget planning report. Look at my spending over the last 3 months, ' +
-      'identify trends or concerns in each budget category, and suggest realistic budget limits ' +
-      'for next month. Be specific and actionable.'
-    ).unwrap()
+    const budgetLines = data.budgets
+      .filter(b => b.avgSpend > 0)
+      .map(b => {
+        const months = data.lookbackMonths.map((m, i) => `${m.label}: ${formatCurrency(b.monthlySpend[i] ?? 0)}`).join(', ')
+        return `- ${b.name}: ${months} | avg ${formatCurrency(b.avgSpend)} | suggested ${formatCurrency(b.suggestedLimit)}${b.currentLimit != null ? ` | current limit ${formatCurrency(b.currentLimit)}` : ''}`
+      })
+      .join('\n')
+
+    const prompt =
+      `Please analyze this monthly budget report and provide specific, actionable recommendations.\n\n` +
+      `Planning for: ${monthName(data.reportMonth)}\n` +
+      `Based on: ${data.lookbackMonths.map(m => m.label).join(', ')}\n` +
+      `Avg monthly income: ${formatCurrency(data.avgMonthlyIncome)}\n` +
+      `Total suggested budget: ${formatCurrency(data.totalSuggestedLimits)}\n` +
+      `Projected savings rate: ${formatPct(data.projectedSavingsRate)}\n\n` +
+      `Budget breakdown:\n${budgetLines}\n\n` +
+      `Identify any concerns, trends worth watching, and whether the suggested limits are realistic. ` +
+      `Do not call any tools — all the data you need is above.`
+
+    const result = await chat(prompt).unwrap()
     setAnalysis(result.answer)
   }
 

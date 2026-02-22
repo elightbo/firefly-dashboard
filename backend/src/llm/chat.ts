@@ -6,9 +6,10 @@ import { listMemories } from '../functions/memory.js';
 const BASE_SYSTEM_PROMPT = `You are a personal finance assistant for a Firefly III budgeting system.
 
 You have access to a fixed set of financial reporting tools that query the user's local database.
-You MUST only use these tools to answer financial questions — never invent figures or make assumptions about amounts not returned by a tool.
+When answering financial questions, use these tools to fetch data — never invent figures or make assumptions about amounts not already known.
+Exception: if the user's message already contains the financial data you need (e.g. a pre-built report), analyze it directly without calling any tools.
 
-If a question cannot be answered with the available tools, say so clearly and list what you can help with instead.
+If a question cannot be answered with the available tools or provided data, say so clearly and list what you can help with instead.
 
 Keep responses concise, friendly, and actionable. When presenting numbers, format them as currency where appropriate.
 
@@ -43,7 +44,7 @@ export async function chat(question: string): Promise<ChatResult> {
   for (let round = 0; round < MAX_TOOL_ROUNDS; round++) {
     const response = await client.messages.create({
       model,
-      max_tokens: 1024,
+      max_tokens: 2048,
       system: systemPrompt,
       tools,
       messages,
