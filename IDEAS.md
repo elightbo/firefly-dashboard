@@ -20,6 +20,13 @@ A beginning-of-month report that analyzes the prior month and suggests budget am
 - **Dedicated page** — a `/report` page in the UI that auto-runs at the start of each month, or has a "Generate Report" button
 - **Scheduled email/notification** — cron job on the 1st of the month that generates and stores the report
 
+**Visual report page (`/report`):**
+- Budget-by-budget breakdown: last 3 month average vs suggested limit for the new month (editable before saving back to Firefly)
+- Bar chart comparing suggested vs current limits side by side
+- Summary stats: projected savings rate if suggestions are followed, total budgeted vs expected income
+- LLM commentary below the visuals explaining the reasoning and flagging anything unusual
+- "Apply to Firefly" button that pushes the new budget limits back via the API (future)
+
 **Easiest starting point:** Add a "Generate monthly report" button to the Q&A console or dashboard that pre-fills the question and triggers the LLM. All the data is already available via existing tools.
 
 ---
