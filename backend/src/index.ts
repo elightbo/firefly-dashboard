@@ -75,9 +75,9 @@ app.get('/health', {
   },
 }, async () => ({ status: 'ok' }));
 
-await app.register(syncRoutes);
-await app.register(functionRoutes);
-await app.register(chatRoutes);
+await app.register(syncRoutes, { prefix: '/api' });
+await app.register(functionRoutes, { prefix: '/api' });
+await app.register(chatRoutes, { prefix: '/api' });
 
 // Serve the built frontend in production (when ./public exists).
 const publicDir = join(__dirname, '..', 'public');
