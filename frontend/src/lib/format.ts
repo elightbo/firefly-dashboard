@@ -1,0 +1,13 @@
+export function formatCurrency(value: number, compact = false): string {
+  return new Intl.NumberFormat('en-US', {
+    style: 'currency',
+    currency: 'USD',
+    notation: compact ? 'compact' : 'standard',
+    maximumFractionDigits: compact ? 1 : 2,
+  }).format(value)
+}
+
+export function formatPct(value: number): string {
+  const sign = value > 0 ? '+' : ''
+  return `${sign}${value.toFixed(1)}%`
+}

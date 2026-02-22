@@ -1,0 +1,27 @@
+# Dependencies
+**/node_modules/
+
+# Build output
+**/dist/
+**/dist-ssr/
+
+# Environment — never commit secrets
+.env
+**/.env
+**/.env.local
+**/.env.*.local
+
+# Logs
+*.log
+**/logs/
+npm-debug.log*
+pnpm-debug.log*
+
+# Claude Code workspace
+.claude/
+
+# Editor
+.vscode/*
+!.vscode/extensions.json
+.idea/
+.DS_Store

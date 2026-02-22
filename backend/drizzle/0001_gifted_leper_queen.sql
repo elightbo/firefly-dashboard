@@ -1,0 +1,1 @@
+ALTER TABLE "piggy_banks" ALTER COLUMN "target_amount" DROP NOT NULL;
