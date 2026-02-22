@@ -115,7 +115,7 @@ export async function functionRoutes(app: FastifyInstance) {
   }, async (req) => getMonthlyOverview(req.query.months));
 
   // GET /functions/budget-report
-  app.get<{ Querystring: { lookback?: number } }>('/functions/budget-report', {
+  app.get<{ Querystring: { lookback?: number; targetMonth?: string } }>('/functions/budget-report', {
     schema: {
       tags: ['Functions'],
       summary: 'Monthly budget planning report — averages, suggested limits, projected savings rate',
@@ -123,10 +123,11 @@ export async function functionRoutes(app: FastifyInstance) {
         type: 'object',
         properties: {
           lookback: { type: 'integer', minimum: 1, maximum: 12, default: 3, description: 'Number of complete months to average over' },
+          targetMonth: { type: 'string', description: 'Month to plan for in YYYY-MM format. Defaults to next month.' },
         },
       },
     },
-  }, async (req) => getMonthlyBudgetReport(req.query.lookback));
+  }, async (req) => getMonthlyBudgetReport(req.query.lookback, req.query.targetMonth));
 
   // GET /functions/monthly-budget-spending
   app.get<{ Querystring: { months?: number } }>('/functions/monthly-budget-spending', {

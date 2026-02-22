@@ -34,14 +34,29 @@ function monthLabel(yyyyMM: string): string {
     .toLocaleDateString('en-US', { month: 'short', year: '2-digit' });
 }
 
-export async function getMonthlyBudgetReport(lookback = 3): Promise<MonthlyBudgetReportResult> {
+export async function getMonthlyBudgetReport(lookback = 3, targetMonth?: string): Promise<MonthlyBudgetReportResult> {
   const now = new Date();
 
-  // Build the last N complete months (never the current partial month).
+  // Determine the report month (the month being planned for).
+  // If targetMonth (YYYY-MM) is provided use it; otherwise default to next month.
+  let reportMonth: string;
+  let anchor: Date; // first day of the report month, used to calculate lookback
+
+  if (targetMonth && /^\d{4}-\d{2}$/.test(targetMonth)) {
+    reportMonth = targetMonth;
+    const [y, m] = targetMonth.split('-').map(Number);
+    anchor = new Date(y, m - 1, 1);
+  } else {
+    const nextMonth = new Date(now.getFullYear(), now.getMonth() + 1, 1);
+    reportMonth = `${nextMonth.getFullYear()}-${String(nextMonth.getMonth() + 1).padStart(2, '0')}`;
+    anchor = nextMonth;
+  }
+
+  // Build the N complete months immediately before the report month.
   const lookbackMonths: Array<{ month: string; start: string; end: string; label: string }> = [];
   for (let i = lookback; i >= 1; i--) {
-    const first = new Date(now.getFullYear(), now.getMonth() - i, 1);
-    const last = new Date(now.getFullYear(), now.getMonth() - i + 1, 0);
+    const first = new Date(anchor.getFullYear(), anchor.getMonth() - i, 1);
+    const last = new Date(anchor.getFullYear(), anchor.getMonth() - i + 1, 0);
     const month = `${first.getFullYear()}-${String(first.getMonth() + 1).padStart(2, '0')}`;
     lookbackMonths.push({
       month,
@@ -53,10 +68,6 @@ export async function getMonthlyBudgetReport(lookback = 3): Promise<MonthlyBudge
 
   const rangeStart = lookbackMonths[0].start;
   const rangeEnd = lookbackMonths[lookbackMonths.length - 1].end;
-
-  // Next month — the month being planned for.
-  const nextMonth = new Date(now.getFullYear(), now.getMonth() + 1, 1);
-  const reportMonth = `${nextMonth.getFullYear()}-${String(nextMonth.getMonth() + 1).padStart(2, '0')}`;
 
   // All spending grouped by month + budget over the lookback window.
   const spendRows = await db

@@ -1,12 +1,14 @@
-import { useState } from 'react'
-import {
-  BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Legend, Cell,
-} from 'recharts'
+import { useState, useMemo } from 'react'
+import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Legend } from 'recharts'
 import { Bot, Loader2 } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
 import { useGetMonthlyBudgetReportQuery, useChatMutation } from '@/store/api'
 import { formatCurrency, formatPct } from '@/lib/format'
+
+function toYYYYMM(d: Date): string {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
+}
 
 function monthName(yyyyMM: string): string {
   const [year, month] = yyyyMM.split('-')
@@ -14,8 +16,33 @@ function monthName(yyyyMM: string): string {
     .toLocaleDateString('en-US', { month: 'long', year: 'numeric' })
 }
 
+function buildMonthOptions(): Array<{ value: string; label: string }> {
+  const now = new Date()
+  const options = []
+  // Next month first (default)
+  const next = new Date(now.getFullYear(), now.getMonth() + 1, 1)
+  options.push({ value: toYYYYMM(next), label: `${monthName(toYYYYMM(next))} (next month)` })
+  // Current month
+  options.push({ value: toYYYYMM(now), label: `${monthName(toYYYYMM(now))} (this month)` })
+  // Last 12 months
+  for (let i = 1; i <= 11; i++) {
+    const d = new Date(now.getFullYear(), now.getMonth() - i, 1)
+    options.push({ value: toYYYYMM(d), label: monthName(toYYYYMM(d)) })
+  }
+  return options
+}
+
+const LOOKBACK_OPTIONS = [
+  { value: 3, label: '3 months' },
+  { value: 6, label: '6 months' },
+  { value: 12, label: '12 months' },
+]
+
 export function Report() {
-  const { data, isLoading } = useGetMonthlyBudgetReportQuery()
+  const monthOptions = useMemo(buildMonthOptions, [])
+  const [targetMonth, setTargetMonth] = useState(monthOptions[0].value)
+  const [lookback, setLookback] = useState(3)
+  const { data, isLoading } = useGetMonthlyBudgetReportQuery({ targetMonth, lookback })
   const [chat, { isLoading: chatLoading }] = useChatMutation()
   const [analysis, setAnalysis] = useState<string | null>(null)
 
@@ -63,12 +90,40 @@ export function Report() {
 
   return (
     <div className="space-y-6 max-w-5xl">
-      <div>
-        <h1 className="text-2xl font-bold tracking-tight">Monthly Report</h1>
-        <p className="text-sm text-muted-foreground mt-1">
-          Budget plan for {monthName(data.reportMonth)} — based on{' '}
-          {data.lookbackMonths.map(m => m.label).join(', ')}
-        </p>
+      <div className="flex flex-wrap items-end justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight">Monthly Report</h1>
+          <p className="text-sm text-muted-foreground mt-1">
+            Budget plan for {monthName(data.reportMonth)} — based on{' '}
+            {data.lookbackMonths.map(m => m.label).join(', ')}
+          </p>
+        </div>
+        <div className="flex items-center gap-3">
+          <div className="flex flex-col gap-1">
+            <label className="text-xs text-muted-foreground font-medium">Planning for</label>
+            <select
+              value={targetMonth}
+              onChange={e => { setTargetMonth(e.target.value); setAnalysis(null) }}
+              className="text-sm border border-input rounded-md px-2 py-1.5 bg-background hover:bg-muted transition-colors cursor-pointer"
+            >
+              {monthOptions.map(o => (
+                <option key={o.value} value={o.value}>{o.label}</option>
+              ))}
+            </select>
+          </div>
+          <div className="flex flex-col gap-1">
+            <label className="text-xs text-muted-foreground font-medium">Avg over</label>
+            <select
+              value={lookback}
+              onChange={e => { setLookback(Number(e.target.value)); setAnalysis(null) }}
+              className="text-sm border border-input rounded-md px-2 py-1.5 bg-background hover:bg-muted transition-colors cursor-pointer"
+            >
+              {LOOKBACK_OPTIONS.map(o => (
+                <option key={o.value} value={o.value}>{o.label}</option>
+              ))}
+            </select>
+          </div>
+        </div>
       </div>
 
       {/* Summary cards */}

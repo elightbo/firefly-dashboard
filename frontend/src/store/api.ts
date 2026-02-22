@@ -37,8 +37,13 @@ export const api = createApi({
       query: (period) => `/functions/compare-spending?period=${period}`,
       providesTags: ['FinancialData'],
     }),
-    getMonthlyBudgetReport: builder.query<MonthlyBudgetReportResult, number | void>({
-      query: (lookback = 3) => `/functions/budget-report?lookback=${lookback}`,
+    getMonthlyBudgetReport: builder.query<MonthlyBudgetReportResult, { lookback?: number; targetMonth?: string } | void>({
+      query: (params) => {
+        const p = new URLSearchParams()
+        if (params?.lookback) p.set('lookback', String(params.lookback))
+        if (params?.targetMonth) p.set('targetMonth', params.targetMonth)
+        return `/functions/budget-report?${p.toString()}`
+      },
       providesTags: ['FinancialData'],
     }),
     getMonthlyOverview: builder.query<MonthlyOverviewPoint[], number | void>({
