@@ -16,8 +16,10 @@ services:
       timeout: 5s
       retries: 5
 
-  backend:
-    build: ./backend
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
     restart: unless-stopped
     depends_on:
       db:
@@ -26,21 +28,22 @@ services:
       DATABASE_URL: postgresql://budget:budget@db:5432/budget
       FIREFLY_BASE_URL: ${FIREFLY_BASE_URL}
       FIREFLY_TOKEN: ${FIREFLY_TOKEN}
-      PORT: 3001
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY}
+      CLAUDE_MODEL: ${CLAUDE_MODEL:-claude-sonnet-4-6}
+      PORT: 3000
     ports:
-      - "3001:3001"
-    profiles:
-      - full
-
-  frontend:
-    build: ./frontend
-    restart: unless-stopped
-    depends_on:
-      - backend
-    ports:
-      - "5173:80"
+      - "${APP_PORT:-3000}:3000"
     profiles:
       - full
 
 volumes:
+  # Named volume — Docker manages the location.
+  # On Unraid this lands in /var/lib/docker/volumes/ by default.
+  # If you prefer a specific path (e.g. /mnt/user/appdata/budget/db),
+  # replace with a bind mount:
+  #   driver: local
+  #   driver_opts:
+  #     type: none
+  #     o: bind
+  #     device: /mnt/user/appdata/budget/db
   db_data:

@@ -62,7 +62,7 @@ export function SpendingChart() {
               width={55}
             />
             <Tooltip
-              formatter={(value: number) => [formatCurrency(value), 'Spent']}
+              formatter={(value: number | undefined) => [formatCurrency(value ?? 0), 'Spent']}
               cursor={{ fill: 'hsl(var(--muted))' }}
             />
             <Bar dataKey="value" radius={[4, 4, 0, 0]}>

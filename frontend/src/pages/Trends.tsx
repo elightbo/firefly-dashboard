@@ -80,8 +80,10 @@ function OverviewChart() {
               domain={[0, 100]}
             />
             <Tooltip
-              formatter={(value: number, name: string) =>
-                name === 'Savings Rate' ? [`${value}%`, name] : [formatCurrency(value), name]
+              formatter={(value, name) =>
+                name === 'Savings Rate'
+                  ? [`${value ?? 0}%`, name ?? '']
+                  : [formatCurrency(Number(value ?? 0)), name ?? '']
               }
               cursor={{ fill: 'hsl(var(--muted))' }}
             />
@@ -145,7 +147,7 @@ function BudgetBreakdownChart() {
               width={58}
             />
             <Tooltip
-              formatter={(value: number, name: string) => [formatCurrency(value), name]}
+              formatter={(value, name) => [formatCurrency(Number(value ?? 0)), name ?? '']}
               cursor={{ fill: 'hsl(var(--muted))' }}
             />
             <Legend wrapperStyle={{ fontSize: 12 }} />

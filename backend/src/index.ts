@@ -1,6 +1,10 @@
 import 'dotenv/config';
+import { join, dirname } from 'path';
+import { fileURLToPath } from 'url';
+import { existsSync } from 'fs';
 import Fastify from 'fastify';
 import cors from '@fastify/cors';
+import staticFiles from '@fastify/static';
 import swagger from '@fastify/swagger';
 import scalarReference from '@scalar/fastify-api-reference';
 import cron from 'node-cron';
@@ -8,6 +12,8 @@ import { syncRoutes } from './routes/sync.js';
 import { functionRoutes } from './routes/functions.js';
 import { chatRoutes } from './routes/chat.js';
 import { runSync } from './sync/index.js';
+
+const __dirname = dirname(fileURLToPath(import.meta.url));
 
 const app = Fastify({ logger: true });
 
@@ -67,6 +73,16 @@ app.get('/health', {
 await app.register(syncRoutes);
 await app.register(functionRoutes);
 await app.register(chatRoutes);
+
+// Serve the built frontend in production (when ./public exists).
+const publicDir = join(__dirname, '..', 'public');
+if (existsSync(publicDir)) {
+  await app.register(staticFiles, { root: publicDir, prefix: '/' });
+  // SPA fallback — any unmatched route returns index.html so React Router works.
+  app.setNotFoundHandler((_req, reply) => {
+    reply.sendFile('index.html');
+  });
+}
 
 // Daily sync at midnight.
 cron.schedule('0 0 * * *', async () => {
