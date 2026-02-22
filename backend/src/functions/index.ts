@@ -7,4 +7,5 @@ export { getTaggedSpending } from './getTaggedSpending.js';
 export { rememberFact, listMemories } from './memory.js';
 export { getMonthlyOverview } from './getMonthlyOverview.js';
 export { getMonthlyBudgetSpending } from './getMonthlyBudgetSpending.js';
+export { getMonthlyBudgetReport } from './getMonthlyBudgetReport.js';
 export type { Period } from './utils.js';

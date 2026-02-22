@@ -10,6 +10,7 @@ import {
   getTaggedSpending,
   getMonthlyOverview,
   getMonthlyBudgetSpending,
+  getMonthlyBudgetReport,
   type Period,
 } from '../functions/index.js';
 
@@ -112,6 +113,20 @@ export async function functionRoutes(app: FastifyInstance) {
       },
     },
   }, async (req) => getMonthlyOverview(req.query.months));
+
+  // GET /functions/budget-report
+  app.get<{ Querystring: { lookback?: number } }>('/functions/budget-report', {
+    schema: {
+      tags: ['Functions'],
+      summary: 'Monthly budget planning report — averages, suggested limits, projected savings rate',
+      querystring: {
+        type: 'object',
+        properties: {
+          lookback: { type: 'integer', minimum: 1, maximum: 12, default: 3, description: 'Number of complete months to average over' },
+        },
+      },
+    },
+  }, async (req) => getMonthlyBudgetReport(req.query.lookback));
 
   // GET /functions/monthly-budget-spending
   app.get<{ Querystring: { months?: number } }>('/functions/monthly-budget-spending', {

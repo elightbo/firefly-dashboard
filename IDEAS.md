@@ -94,6 +94,27 @@ Phase 7 from the original plan — not started yet:
 
 ---
 
+## User management + Cloudflare Tunnel access
+
+**Goal:** Expose the dashboard externally via Cloudflare Tunnel so family members can access it.
+
+**Features needed:**
+- **Authentication** — basic auth or OAuth (Cloudflare Access can handle this in front of the tunnel for free, no app changes needed for simple use cases)
+- **Per-user views** — e.g. a spouse-friendly page that shows only the budget categories they care about, saved as a preference per user
+- **Read-only mode** — external users shouldn't be able to trigger syncs or write memories
+
+**Simplest path:**
+- Use Cloudflare Access (Zero Trust) in front of the tunnel for auth — no backend changes needed
+- Add a `user_preferences` table: `user_id`, `key`, `value` (JSON)
+- Add a `/my-budgets` page where a user can pin the budget categories they want to track
+- The pinned view shows just those categories with current spend vs limit
+
+**Notes:**
+- Cloudflare Tunnel is already likely running on Unraid if using other self-hosted apps
+- Cloudflare Access free tier supports up to 50 users with email OTP — no passwords needed
+
+---
+
 ## Misc
 
 - **System prompt tuning** — as edge cases are discovered, refine the system prompt and tool descriptions to guide Claude toward better answers

@@ -7,6 +7,7 @@ import type {
   CompareSpendingResult,
   MonthlyOverviewPoint,
   MonthlyBudgetSpendingResult,
+  MonthlyBudgetReportResult,
   ChatResult,
   Period,
 } from '@/types'
@@ -36,6 +37,10 @@ export const api = createApi({
       query: (period) => `/functions/compare-spending?period=${period}`,
       providesTags: ['FinancialData'],
     }),
+    getMonthlyBudgetReport: builder.query<MonthlyBudgetReportResult, number | void>({
+      query: (lookback = 3) => `/functions/budget-report?lookback=${lookback}`,
+      providesTags: ['FinancialData'],
+    }),
     getMonthlyOverview: builder.query<MonthlyOverviewPoint[], number | void>({
       query: (months = 12) => `/functions/monthly-overview?months=${months}`,
       providesTags: ['FinancialData'],
@@ -62,5 +67,6 @@ export const {
   useGetCompareSpendingQuery,
   useGetMonthlyOverviewQuery,
   useGetMonthlyBudgetSpendingQuery,
+  useGetMonthlyBudgetReportQuery,
   useChatMutation,
 } = api

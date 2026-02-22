@@ -50,6 +50,25 @@ export interface MonthlyOverviewPoint {
   savingsRate: number
 }
 
+export interface BudgetReportItem {
+  id: string
+  name: string
+  currentLimit: number | null
+  monthlySpend: number[]
+  avgSpend: number
+  suggestedLimit: number
+}
+
+export interface MonthlyBudgetReportResult {
+  reportMonth: string
+  lookbackMonths: Array<{ month: string; label: string }>
+  avgMonthlyIncome: number
+  budgets: BudgetReportItem[]
+  totalCurrentLimits: number
+  totalSuggestedLimits: number
+  projectedSavingsRate: number
+}
+
 export interface MonthlyBudgetSpendingResult {
   months: Array<{ month: string; totals: Record<string, number> }>
   budgets: string[]
