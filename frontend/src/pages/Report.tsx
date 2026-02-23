@@ -47,6 +47,7 @@ export function Report() {
   const [analysis, setAnalysis] = useState<string | null>(null)
 
   async function handleAnalysis() {
+    if (!data) return
     const budgetLines = data.budgets
       .filter(b => b.avgSpend > 0)
       .map(b => {
