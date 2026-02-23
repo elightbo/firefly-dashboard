@@ -27,13 +27,34 @@ const SUGGESTIONS = [
   'What is my savings rate this month?',
 ]
 
+const SESSION_KEY_ID   = 'chatConversationId'
+const SESSION_KEY_MSGS = 'chatMessages'
+
 export function QAConsole() {
-  const [messages, setMessages] = useState<Message[]>([])
+  const [conversationId, setConversationId] = useState<string>(
+    () => sessionStorage.getItem(SESSION_KEY_ID) ?? crypto.randomUUID(),
+  )
+  const [messages, setMessages] = useState<Message[]>(() => {
+    try {
+      const raw = sessionStorage.getItem(SESSION_KEY_MSGS)
+      if (!raw) return []
+      // Normalize any mid-stream messages left by a page close
+      return (JSON.parse(raw) as Message[]).map(m => ({ ...m, streaming: false }))
+    } catch { return [] }
+  })
   const [input, setInput] = useState('')
   const [isStreaming, setIsStreaming] = useState(false)
-  const [conversationId, setConversationId] = useState(() => crypto.randomUUID())
   const bottomRef = useRef<HTMLDivElement>(null)
   const abortRef = useRef<AbortController | null>(null)
+
+  // Keep sessionStorage in sync
+  useEffect(() => {
+    sessionStorage.setItem(SESSION_KEY_ID, conversationId)
+  }, [conversationId])
+
+  useEffect(() => {
+    sessionStorage.setItem(SESSION_KEY_MSGS, JSON.stringify(messages))
+  }, [messages])
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
@@ -147,6 +168,8 @@ export function QAConsole() {
     abortRef.current?.abort()
     // Best-effort clear of server-side history; don't await
     fetch(`/api/chat/history/${conversationId}`, { method: 'DELETE' }).catch(() => {})
+    sessionStorage.removeItem(SESSION_KEY_MSGS)
+    sessionStorage.removeItem(SESSION_KEY_ID)
     setConversationId(crypto.randomUUID())
     setMessages([])
     setInput('')
