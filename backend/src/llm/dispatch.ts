@@ -8,6 +8,9 @@ import {
   getBudgetStatus,
   getTaggedSpending,
   rememberFact,
+  listMemoriesWithIds,
+  forgetMemory,
+  updateMemory,
   getPayStubSummary,
   listPayStubs,
   getNetWorthHistory,
@@ -46,6 +49,15 @@ export async function dispatchTool(name: string, input: ToolInput): Promise<unkn
 
     case 'remember_fact':
       return rememberFact(input.fact as string);
+
+    case 'list_memories':
+      return listMemoriesWithIds();
+
+    case 'forget_memory':
+      return forgetMemory(input.id as number);
+
+    case 'update_memory':
+      return updateMemory(input.id as number, input.content as string);
 
     case 'get_net_worth_history':
       return getNetWorthHistory(input.months as number | undefined);

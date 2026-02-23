@@ -88,6 +88,34 @@ export const tools: Anthropic.Tool[] = [
     },
   },
   {
+    name: 'list_memories',
+    description: 'Returns all stored memories about the user, each with its id and content. Use this before calling forget_memory or update_memory to find the correct id.',
+    input_schema: { type: 'object', properties: {}, required: [] },
+  },
+  {
+    name: 'forget_memory',
+    description: 'Permanently deletes a stored memory by id. Call list_memories first to find the correct id. Use when the user asks to forget or remove something you remembered, or when a memory is clearly outdated or incorrect.',
+    input_schema: {
+      type: 'object',
+      properties: {
+        id: { type: 'number', description: 'The id of the memory to delete, from list_memories.' },
+      },
+      required: ['id'],
+    },
+  },
+  {
+    name: 'update_memory',
+    description: 'Replaces the content of an existing memory by id. Call list_memories first to find the correct id. Use when the user corrects something you remembered, or when a fact has changed.',
+    input_schema: {
+      type: 'object',
+      properties: {
+        id:      { type: 'number', description: 'The id of the memory to update, from list_memories.' },
+        content: { type: 'string', description: 'The updated fact, written as a clear statement.' },
+      },
+      required: ['id', 'content'],
+    },
+  },
+  {
     name: 'get_net_worth_history',
     description: 'Returns historical net worth snapshots (one per sync day) for the last N months. Use this to answer questions about net worth trends, growth rate, or how net worth has changed over time.',
     input_schema: {
