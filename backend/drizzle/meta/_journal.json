@@ -57,6 +57,13 @@
       "when": 1771809712163,
       "tag": "0007_fantastic_millenium_guard",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1771879785343,
+      "tag": "0008_smart_cargill",
+      "breakpoints": true
     }
   ]
 }

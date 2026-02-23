@@ -1,7 +1,37 @@
-import { and, gte, lte, sum } from 'drizzle-orm';
+import { and, gte, lte, sum, desc, SQL } from 'drizzle-orm';
 import { db } from '../db/index.js';
 import { payStubs } from '../db/schema.js';
 import { type Period, resolvePeriod, toNum } from './utils.js';
+
+export interface PayStubRecord {
+  id: number;
+  payDate: string;
+  employer: string;
+  gross: number;
+  retirement: number;
+  employerMatch: number;
+  stockOptions: number;
+  notes: string | null;
+}
+
+export async function listPayStubs(limit = 10): Promise<PayStubRecord[]> {
+  const rows = await db
+    .select()
+    .from(payStubs)
+    .orderBy(desc(payStubs.payDate))
+    .limit(limit);
+
+  return rows.map(r => ({
+    id: r.id,
+    payDate: r.payDate,
+    employer: r.employer,
+    gross: Math.round(toNum(r.gross) * 100) / 100,
+    retirement: Math.round(toNum(r.retirement) * 100) / 100,
+    employerMatch: Math.round(toNum(r.employerMatch) * 100) / 100,
+    stockOptions: Math.round(toNum(r.stockOptions) * 100) / 100,
+    notes: r.notes ?? null,
+  }));
+}
 
 export interface PayStubSummaryResult {
   period: { start: string; end: string };
@@ -14,10 +44,13 @@ export interface PayStubSummaryResult {
   byEmployer: Array<{ employer: string; gross: number; preTaxSavings: number }>;
 }
 
-export async function getPayStubSummary(period: Period = 'year_to_date'): Promise<PayStubSummaryResult> {
-  const { start, end } = resolvePeriod(period);
+export async function getPayStubSummary(period?: Period): Promise<PayStubSummaryResult> {
+  const resolved = period ? resolvePeriod(period) : null;
+  const { start, end } = resolved ?? { start: null, end: null };
 
-  const dateFilter = and(gte(payStubs.payDate, start), lte(payStubs.payDate, end));
+  const dateFilter: SQL | undefined = start && end
+    ? and(gte(payStubs.payDate, start), lte(payStubs.payDate, end))
+    : undefined;
 
   const [totals, byEmployerRows] = await Promise.all([
     db
@@ -60,7 +93,7 @@ export async function getPayStubSummary(period: Period = 'year_to_date'): Promis
   });
 
   return {
-    period: { start, end },
+    period: { start: start ?? 'all_time', end: end ?? 'all_time' },
     grossIncome,
     retirementContributions,
     employerMatch: employerMatchTotal,

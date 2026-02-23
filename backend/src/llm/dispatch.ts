@@ -9,6 +9,7 @@ import {
   getTaggedSpending,
   rememberFact,
   getPayStubSummary,
+  listPayStubs,
   getNetWorthHistory,
   type Period,
 } from '../functions/index.js';
@@ -51,6 +52,9 @@ export async function dispatchTool(name: string, input: ToolInput): Promise<unkn
 
     case 'get_pay_stub_summary':
       return getPayStubSummary(input.period as Period | undefined);
+
+    case 'list_pay_stubs':
+      return listPayStubs(input.limit as number | undefined);
 
     default:
       throw new Error(`Unknown tool: ${name}`);

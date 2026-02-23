@@ -113,6 +113,20 @@ export const payStubs = pgTable('pay_stubs', {
 });
 
 // ---------------------------------------------------------------------------
+// LLM Configs — user-managed list of AI providers; one is active at a time
+// ---------------------------------------------------------------------------
+export const llmConfigs = pgTable('llm_configs', {
+  id:        serial('id').primaryKey(),
+  name:      text('name').notNull(),
+  provider:  text('provider').notNull(), // 'anthropic' | 'openai_compatible'
+  baseUrl:   text('base_url'),           // required for openai_compatible (e.g. http://ollama:11434)
+  apiKey:    text('api_key'),            // optional for local Ollama
+  model:     text('model').notNull(),
+  isActive:  boolean('is_active').notNull().default(false),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+});
+
+// ---------------------------------------------------------------------------
 // Budgets
 // ---------------------------------------------------------------------------
 export const budgets = pgTable('budgets', {

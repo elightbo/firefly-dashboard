@@ -1,5 +1,5 @@
 import { NavLink, Outlet, useNavigate } from 'react-router-dom'
-import { LayoutDashboard, MessageSquare, TrendingUp, RefreshCw, ClipboardList, LogOut, Settings, Bookmark, Receipt, TriangleAlert } from 'lucide-react'
+import { LayoutDashboard, MessageSquare, TrendingUp, RefreshCw, ClipboardList, LogOut, Settings, Bookmark, Receipt, TriangleAlert, Menu, X } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useState } from 'react'
 import { useDispatch } from 'react-redux'
@@ -14,8 +14,17 @@ const navItems = [
   { to: '/pay-stubs', label: 'Pay Stubs', icon: Receipt },
 ]
 
+const navLinkClass = ({ isActive }: { isActive: boolean }) =>
+  cn(
+    'flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium transition-colors',
+    isActive
+      ? 'bg-primary text-primary-foreground'
+      : 'text-muted-foreground hover:text-foreground hover:bg-muted',
+  )
+
 export function AppShell() {
   const [syncing, setSyncing] = useState(false)
+  const [mobileOpen, setMobileOpen] = useState(false)
   const dispatch = useDispatch()
   const navigate = useNavigate()
   const { data: me } = useGetMeQuery()
@@ -36,68 +45,94 @@ export function AppShell() {
     navigate('/login', { replace: true })
   }
 
+  function closeMobile() { setMobileOpen(false) }
+
   return (
     <div className="min-h-screen bg-background">
-      <header className="border-b bg-card px-6 py-3 flex items-center justify-between">
+      <header className="border-b bg-card px-4 md:px-6 py-3 flex items-center justify-between">
+        {/* Left: logo + desktop nav */}
         <div className="flex items-center gap-6">
           <span className="font-semibold text-lg tracking-tight">Budget</span>
-          <nav className="flex gap-1">
+          <nav className="hidden md:flex gap-1">
             {navItems.map(({ to, label, icon: Icon }) => (
-              <NavLink
-                key={to}
-                to={to}
-                end={to === '/'}
-                className={({ isActive }) =>
-                  cn(
-                    'flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium transition-colors',
-                    isActive
-                      ? 'bg-primary text-primary-foreground'
-                      : 'text-muted-foreground hover:text-foreground hover:bg-muted',
-                  )
-                }
-              >
+              <NavLink key={to} to={to} end={to === '/'} className={navLinkClass}>
                 <Icon className="h-4 w-4" />
                 {label}
               </NavLink>
             ))}
           </nav>
         </div>
+
+        {/* Right: desktop actions + mobile hamburger */}
         <div className="flex items-center gap-2">
-          {me && (
-            <span className="text-sm text-muted-foreground">{me.username}</span>
-          )}
-          <NavLink
-            to="/settings"
-            className={({ isActive }) =>
-              cn(
-                'flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm transition-colors',
-                isActive
-                  ? 'bg-primary text-primary-foreground'
-                  : 'text-muted-foreground hover:text-foreground hover:bg-muted',
-              )
-            }
-            title="Settings"
-          >
-            <Settings className="h-4 w-4" />
-          </NavLink>
+          {/* Desktop-only actions */}
+          <div className="hidden md:flex items-center gap-2">
+            {me && <span className="text-sm text-muted-foreground">{me.username}</span>}
+            <NavLink to="/settings" className={navLinkClass} title="Settings">
+              <Settings className="h-4 w-4" />
+            </NavLink>
+            <button
+              onClick={handleSync}
+              disabled={syncing}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm text-muted-foreground hover:text-foreground hover:bg-muted transition-colors disabled:opacity-50"
+            >
+              <RefreshCw className={cn('h-4 w-4', syncing && 'animate-spin')} />
+              {syncing ? 'Syncing…' : 'Sync'}
+            </button>
+            <button
+              onClick={handleLogout}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+              title="Sign out"
+            >
+              <LogOut className="h-4 w-4" />
+              Sign out
+            </button>
+          </div>
+
+          {/* Mobile hamburger */}
           <button
-            onClick={handleSync}
-            disabled={syncing}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm text-muted-foreground hover:text-foreground hover:bg-muted transition-colors disabled:opacity-50"
+            className="md:hidden p-2 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+            onClick={() => setMobileOpen(o => !o)}
+            aria-label="Toggle menu"
           >
-            <RefreshCw className={cn('h-4 w-4', syncing && 'animate-spin')} />
-            {syncing ? 'Syncing…' : 'Sync'}
-          </button>
-          <button
-            onClick={handleLogout}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
-            title="Sign out"
-          >
-            <LogOut className="h-4 w-4" />
-            Sign out
+            {mobileOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
           </button>
         </div>
       </header>
+
+      {/* Mobile menu */}
+      {mobileOpen && (
+        <div className="md:hidden border-b bg-card px-4 py-3 space-y-1">
+          {navItems.map(({ to, label, icon: Icon }) => (
+            <NavLink key={to} to={to} end={to === '/'} className={navLinkClass} onClick={closeMobile}>
+              <Icon className="h-4 w-4" />
+              {label}
+            </NavLink>
+          ))}
+          <div className="border-t mt-2 pt-2 space-y-1">
+            <NavLink to="/settings" className={navLinkClass} onClick={closeMobile}>
+              <Settings className="h-4 w-4" />
+              Settings
+            </NavLink>
+            <button
+              onClick={() => { handleSync(); closeMobile() }}
+              disabled={syncing}
+              className="w-full flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm text-muted-foreground hover:text-foreground hover:bg-muted transition-colors disabled:opacity-50"
+            >
+              <RefreshCw className={cn('h-4 w-4', syncing && 'animate-spin')} />
+              {syncing ? 'Syncing…' : 'Sync'}
+            </button>
+            <button
+              onClick={() => { handleLogout(); closeMobile() }}
+              className="w-full flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+            >
+              <LogOut className="h-4 w-4" />
+              Sign out
+            </button>
+          </div>
+        </div>
+      )}
+
       {me?.isDefault && (
         <div className="bg-amber-50 border-b border-amber-200 px-6 py-2 flex items-center gap-2 text-sm text-amber-800">
           <TriangleAlert className="h-4 w-4 shrink-0" />
@@ -109,7 +144,7 @@ export function AppShell() {
           </span>
         </div>
       )}
-      <main className="p-6">
+      <main className="p-4 md:p-6">
         <Outlet />
       </main>
     </div>

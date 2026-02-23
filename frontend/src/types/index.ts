@@ -94,6 +94,17 @@ export interface PayStub {
   createdAt: string
 }
 
+export interface LLMConfig {
+  id: number
+  name: string
+  provider: 'anthropic' | 'openai_compatible'
+  baseUrl: string | null
+  model: string
+  apiKeySet: boolean
+  isActive: boolean
+  createdAt: string
+}
+
 export interface PayStubSummaryResult {
   period: { start: string; end: string }
   grossIncome: number

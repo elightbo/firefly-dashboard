@@ -13,6 +13,7 @@ import type {
   Period,
   PayStub,
   PayStubSummaryResult,
+  LLMConfig,
 } from '@/types'
 
 export interface AuthUser {
@@ -155,6 +156,29 @@ export const api = createApi({
       }),
       invalidatesTags: ['Prefs'],
     }),
+    getLLMConfigs: builder.query<LLMConfig[], void>({
+      query: () => '/admin/llm-configs',
+      providesTags: ['Auth'],
+    }),
+    createLLMConfig: builder.mutation<LLMConfig, { name: string; provider: string; model: string; baseUrl?: string; apiKey?: string }>({
+      query: (body) => ({ url: '/admin/llm-configs', method: 'POST', body }),
+      invalidatesTags: ['Auth'],
+    }),
+    updateLLMConfig: builder.mutation<LLMConfig, { id: number; name: string; provider: string; model: string; baseUrl?: string; apiKey?: string }>({
+      query: ({ id, ...body }) => ({ url: `/admin/llm-configs/${id}`, method: 'PUT', body }),
+      invalidatesTags: ['Auth'],
+    }),
+    activateLLMConfig: builder.mutation<LLMConfig, number>({
+      query: (id) => ({ url: `/admin/llm-configs/${id}/activate`, method: 'POST' }),
+      invalidatesTags: ['Auth'],
+    }),
+    deleteLLMConfig: builder.mutation<{ ok: boolean }, number>({
+      query: (id) => ({ url: `/admin/llm-configs/${id}`, method: 'DELETE' }),
+      invalidatesTags: ['Auth'],
+    }),
+    changePassword: builder.mutation<{ ok: boolean }, { currentPassword: string; newPassword: string }>({
+      query: (body) => ({ url: '/auth/password', method: 'PUT', body }),
+    }),
   }),
 })
 
@@ -182,4 +206,10 @@ export const {
   useCreatePayStubMutation,
   useDeletePayStubMutation,
   useGetPayStubSummaryQuery,
+  useGetLLMConfigsQuery,
+  useCreateLLMConfigMutation,
+  useUpdateLLMConfigMutation,
+  useActivateLLMConfigMutation,
+  useDeleteLLMConfigMutation,
+  useChangePasswordMutation,
 } = api

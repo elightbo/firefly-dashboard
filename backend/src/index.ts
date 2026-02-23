@@ -18,6 +18,7 @@ import { authRoutes } from './routes/auth.js';
 import { adminRoutes } from './routes/admin.js';
 import { prefsRoutes } from './routes/prefs.js';
 import { payStubRoutes } from './routes/payStubs.js';
+import { llmConfigRoutes } from './routes/llmConfigs.js';
 import bcrypt from 'bcryptjs';
 import { count } from 'drizzle-orm';
 import { runSync } from './sync/index.js';
@@ -26,7 +27,7 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 
 // Run migrations on startup — no-op if already applied.
 import { db } from './db/index.js';
-import { users } from './db/schema.js';
+import { users, llmConfigs } from './db/schema.js';
 await migrate(db, { migrationsFolder: join(__dirname, '..', 'drizzle') });
 
 // Seed a default admin account on first boot so the UI is immediately accessible.
@@ -36,6 +37,21 @@ await migrate(db, { migrationsFolder: join(__dirname, '..', 'drizzle') });
     const passwordHash = await bcrypt.hash('changeme', 12);
     await db.insert(users).values({ username: 'admin', passwordHash });
     console.log('[startup] No users found — created default account (admin / changeme). Create a real account in Settings and delete this one.');
+  }
+}
+
+// Seed a default LLM config from env vars if none exist yet.
+{
+  const [{ value: llmCount }] = await db.select({ value: count() }).from(llmConfigs);
+  if (Number(llmCount) === 0 && process.env.ANTHROPIC_API_KEY) {
+    await db.insert(llmConfigs).values({
+      name: 'Claude (default)',
+      provider: 'anthropic',
+      model: process.env.CLAUDE_MODEL ?? 'claude-sonnet-4-6',
+      apiKey: process.env.ANTHROPIC_API_KEY,
+      isActive: true,
+    });
+    console.log('[startup] Seeded default LLM config from env vars.');
   }
 }
 
@@ -127,6 +143,7 @@ await app.register(chatRoutes, { prefix: '/api' });
 await app.register(adminRoutes, { prefix: '/api' });
 await app.register(prefsRoutes, { prefix: '/api' });
 await app.register(payStubRoutes, { prefix: '/api' });
+await app.register(llmConfigRoutes, { prefix: '/api' });
 
 // Serve the built frontend in production (when ./public exists).
 const publicDir = join(__dirname, '..', 'public');

@@ -1,13 +1,39 @@
 import Anthropic from '@anthropic-ai/sdk';
+import OpenAI from 'openai';
+import { eq } from 'drizzle-orm';
+import { db } from '../db/index.js';
+import { llmConfigs } from '../db/schema.js';
 import { tools } from './tools.js';
 import { dispatchTool } from './dispatch.js';
 import { listMemories } from '../functions/memory.js';
 
+interface ActiveLLMConfig {
+  provider: string;
+  apiKey: string | null;
+  model: string;
+  baseUrl: string | null;
+}
+
+async function getActiveLLMConfig(): Promise<ActiveLLMConfig> {
+  const [active] = await db.select().from(llmConfigs).where(eq(llmConfigs.isActive, true)).limit(1);
+  if (active) {
+    return { provider: active.provider, apiKey: active.apiKey, model: active.model, baseUrl: active.baseUrl };
+  }
+  // Fall back to env vars for backwards compatibility.
+  return {
+    provider: 'anthropic',
+    apiKey: process.env.ANTHROPIC_API_KEY ?? null,
+    model: process.env.CLAUDE_MODEL ?? 'claude-sonnet-4-6',
+    baseUrl: null,
+  };
+}
+
 // ---------------------------------------------------------------------------
-// In-memory conversation store — persists message threads for the server
-// lifetime. A new conversationId (sent by the client) starts a fresh thread.
+// In-memory conversation store (Anthropic format only).
+// OpenAI-compatible chats are stateless for now — history support can be
+// added once a provider-agnostic message format is established.
 // ---------------------------------------------------------------------------
-const MAX_HISTORY = 40; // ~10 turns with a single tool call each
+const MAX_HISTORY = 40;
 const conversationStore = new Map<string, Anthropic.MessageParam[]>();
 
 function getHistory(id: string): Anthropic.MessageParam[] {
@@ -54,10 +80,31 @@ async function buildSystemPrompt(): Promise<string> {
   return `${BASE_SYSTEM_PROMPT}\n\n## What you know about this user\n${memoryBlock}`;
 }
 
-export async function chat(question: string): Promise<ChatResult> {
-  const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
-  const model = process.env.CLAUDE_MODEL ?? 'claude-sonnet-4-6';
+// ---------------------------------------------------------------------------
+// Convert Anthropic tool definitions → OpenAI function-calling format
+// ---------------------------------------------------------------------------
+function toOpenAITools(anthropicTools: Anthropic.Tool[]): OpenAI.Chat.ChatCompletionTool[] {
+  return anthropicTools.map(t => ({
+    type: 'function' as const,
+    function: {
+      name: t.name,
+      description: t.description ?? '',
+      parameters: t.input_schema as Record<string, unknown>,
+    },
+  }));
+}
 
+// ---------------------------------------------------------------------------
+// Anthropic path
+// ---------------------------------------------------------------------------
+export async function chat(question: string): Promise<ChatResult> {
+  const config = await getActiveLLMConfig();
+  if (config.provider !== 'anthropic') {
+    throw new Error(`Non-streaming chat is only supported for Anthropic. Use the streaming endpoint.`);
+  }
+
+  const client = new Anthropic({ apiKey: config.apiKey ?? undefined });
+  const model = config.model;
   const [systemPrompt, messages] = await Promise.all([
     buildSystemPrompt(),
     Promise.resolve<Anthropic.MessageParam[]>([{ role: 'user', content: question }]),
@@ -65,82 +112,53 @@ export async function chat(question: string): Promise<ChatResult> {
 
   const toolsUsed: string[] = [];
 
-  // Agentic loop — Claude may call multiple tools before forming a final answer.
   for (let round = 0; round < MAX_TOOL_ROUNDS; round++) {
-    const response = await client.messages.create({
-      model,
-      max_tokens: 2048,
-      system: systemPrompt,
-      tools,
-      messages,
-    });
-
-    // Append assistant response to message history.
+    const response = await client.messages.create({ model, max_tokens: 2048, system: systemPrompt, tools, messages });
     messages.push({ role: 'assistant', content: response.content });
 
     if (response.stop_reason === 'end_turn') {
-      // Claude is done — extract the final text response.
       const text = response.content
         .filter((b): b is Anthropic.TextBlock => b.type === 'text')
-        .map(b => b.text)
-        .join('\n')
-        .trim();
+        .map(b => b.text).join('\n').trim();
       return { answer: text, toolsUsed };
     }
 
     if (response.stop_reason === 'tool_use') {
-      // Execute all tool calls Claude requested and collect results.
       const toolResults: Anthropic.ToolResultBlockParam[] = [];
-
       for (const block of response.content) {
         if (block.type !== 'tool_use') continue;
-
         toolsUsed.push(block.name);
-
         try {
           const result = await dispatchTool(block.name, block.input as Record<string, unknown>);
-          toolResults.push({
-            type: 'tool_result',
-            tool_use_id: block.id,
-            content: JSON.stringify(result),
-          });
+          toolResults.push({ type: 'tool_result', tool_use_id: block.id, content: JSON.stringify(result) });
         } catch (err) {
           const message = err instanceof Error ? err.message : String(err);
-          toolResults.push({
-            type: 'tool_result',
-            tool_use_id: block.id,
-            content: `Error: ${message}`,
-            is_error: true,
-          });
+          toolResults.push({ type: 'tool_result', tool_use_id: block.id, content: `Error: ${message}`, is_error: true });
         }
       }
-
       messages.push({ role: 'user', content: toolResults });
       continue;
     }
 
-    // Unexpected stop reason — bail out.
     break;
   }
 
   return { answer: 'Sorry, I was unable to answer that question.', toolsUsed };
 }
 
-// Streaming variant — fires onEvent callbacks as tokens and tool calls arrive.
-// Tool rounds are awaited non-streaming; the final text answer streams token-by-token.
-// Pass a conversationId to maintain history across turns; null for a stateless call.
-export async function chatStream(
+// ---------------------------------------------------------------------------
+// Anthropic streaming path (with conversation history)
+// ---------------------------------------------------------------------------
+async function chatStreamAnthropic(
   conversationId: string | null,
   question: string,
   onEvent: (event: StreamEvent) => void,
-  signal?: AbortSignal,
+  signal: AbortSignal | undefined,
+  config: ActiveLLMConfig,
 ): Promise<void> {
-  const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
-  const model = process.env.CLAUDE_MODEL ?? 'claude-sonnet-4-6';
-
+  const client = new Anthropic({ apiKey: config.apiKey ?? undefined });
   const systemPrompt = await buildSystemPrompt();
 
-  // Prepend stored history so Claude has full context from previous turns.
   const messages: Anthropic.MessageParam[] = [
     ...(conversationId ? getHistory(conversationId) : []),
     { role: 'user', content: question },
@@ -148,15 +166,12 @@ export async function chatStream(
   const toolsUsed: string[] = [];
 
   for (let round = 0; round < MAX_TOOL_ROUNDS; round++) {
-    // Use the streaming API every round so the final answer streams token-by-token.
-    // During tool_use rounds Claude typically emits no text, so nothing reaches the client.
     const stream = client.messages.stream(
-      { model, max_tokens: 2048, system: systemPrompt, tools, messages },
+      { model: config.model, max_tokens: 2048, system: systemPrompt, tools, messages },
       { signal },
     );
 
     stream.on('text', (text) => onEvent({ type: 'text', text }));
-
     const response = await stream.finalMessage();
     messages.push({ role: 'assistant', content: response.content });
 
@@ -168,12 +183,10 @@ export async function chatStream(
 
     if (response.stop_reason === 'tool_use') {
       const toolResults: Anthropic.ToolResultBlockParam[] = [];
-
       for (const block of response.content) {
         if (block.type !== 'tool_use') continue;
         toolsUsed.push(block.name);
         onEvent({ type: 'tool', name: block.name });
-
         try {
           const result = await dispatchTool(block.name, block.input as Record<string, unknown>);
           toolResults.push({ type: 'tool_result', tool_use_id: block.id, content: JSON.stringify(result) });
@@ -182,7 +195,6 @@ export async function chatStream(
           toolResults.push({ type: 'tool_result', tool_use_id: block.id, content: `Error: ${msg}`, is_error: true });
         }
       }
-
       messages.push({ role: 'user', content: toolResults });
       continue;
     }
@@ -192,4 +204,115 @@ export async function chatStream(
 
   if (conversationId) saveHistory(conversationId, messages);
   onEvent({ type: 'done', toolsUsed });
+}
+
+// ---------------------------------------------------------------------------
+// OpenAI-compatible streaming path (Ollama, OpenRouter, etc.)
+// Conversation history is stateless per-turn for now.
+// ---------------------------------------------------------------------------
+async function chatStreamOpenAI(
+  question: string,
+  onEvent: (event: StreamEvent) => void,
+  signal: AbortSignal | undefined,
+  config: ActiveLLMConfig,
+): Promise<void> {
+  const baseURL = config.baseUrl ? `${config.baseUrl.replace(/\/$/, '')}/v1` : undefined;
+  const client = new OpenAI({
+    apiKey: config.apiKey ?? 'ollama', // Ollama ignores the key but the SDK requires a non-empty value
+    baseURL,
+  });
+
+  const systemPrompt = await buildSystemPrompt();
+  const openAITools = toOpenAITools(tools);
+  const toolsUsed: string[] = [];
+
+  const messages: OpenAI.Chat.ChatCompletionMessageParam[] = [
+    { role: 'system', content: systemPrompt },
+    { role: 'user', content: question },
+  ];
+
+  for (let round = 0; round < MAX_TOOL_ROUNDS; round++) {
+    // Collect the full streamed response.
+    const stream = await client.chat.completions.create(
+      { model: config.model, messages, tools: openAITools, stream: true },
+      { signal },
+    );
+
+    let textContent = '';
+    // Accumulate streamed tool call deltas — indexed by tool_calls[].index.
+    const tcAccum: Record<number, { id: string; name: string; args: string }> = {};
+
+    for await (const chunk of stream) {
+      const delta = chunk.choices[0]?.delta;
+      if (!delta) continue;
+
+      if (delta.content) {
+        textContent += delta.content;
+        onEvent({ type: 'text', text: delta.content });
+      }
+
+      if (delta.tool_calls) {
+        for (const tc of delta.tool_calls) {
+          const idx = tc.index ?? 0;
+          if (!tcAccum[idx]) tcAccum[idx] = { id: '', name: '', args: '' };
+          if (tc.id) tcAccum[idx].id = tc.id;
+          if (tc.function?.name) tcAccum[idx].name = tc.function.name;
+          if (tc.function?.arguments) tcAccum[idx].args += tc.function.arguments;
+        }
+      }
+    }
+
+    const toolCalls = Object.values(tcAccum).filter(tc => tc.name);
+
+    if (toolCalls.length === 0) {
+      // Model finished without requesting any tools.
+      onEvent({ type: 'done', toolsUsed });
+      return;
+    }
+
+    // Append assistant message with tool_calls.
+    messages.push({
+      role: 'assistant',
+      content: textContent || null,
+      tool_calls: toolCalls.map(tc => ({
+        id: tc.id,
+        type: 'function' as const,
+        function: { name: tc.name, arguments: tc.args },
+      })),
+    });
+
+    // Execute each tool and append results.
+    for (const tc of toolCalls) {
+      toolsUsed.push(tc.name);
+      onEvent({ type: 'tool', name: tc.name });
+      try {
+        const input = JSON.parse(tc.args || '{}') as Record<string, unknown>;
+        const result = await dispatchTool(tc.name, input);
+        messages.push({ role: 'tool', tool_call_id: tc.id, content: JSON.stringify(result) });
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : String(err);
+        messages.push({ role: 'tool', tool_call_id: tc.id, content: `Error: ${msg}` });
+      }
+    }
+  }
+
+  onEvent({ type: 'done', toolsUsed });
+}
+
+// ---------------------------------------------------------------------------
+// Public entry point — dispatches to the right provider
+// ---------------------------------------------------------------------------
+export async function chatStream(
+  conversationId: string | null,
+  question: string,
+  onEvent: (event: StreamEvent) => void,
+  signal?: AbortSignal,
+): Promise<void> {
+  const config = await getActiveLLMConfig();
+
+  if (config.provider === 'openai_compatible') {
+    return chatStreamOpenAI(question, onEvent, signal, config);
+  }
+
+  return chatStreamAnthropic(conversationId, question, onEvent, signal, config);
 }

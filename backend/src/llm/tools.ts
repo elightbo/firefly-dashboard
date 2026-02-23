@@ -100,11 +100,22 @@ export const tools: Anthropic.Tool[] = [
   },
   {
     name: 'get_pay_stub_summary',
-    description: 'Returns household gross income and pre-tax savings (retirement contributions, employer match, stock options/ESPP) for a period. Combine with analyze_income_allocation to calculate the true total savings rate including pre-tax contributions.',
+    description: 'Returns household gross income and pre-tax savings (retirement contributions, employer match, stock options/ESPP). If no period is provided, returns all-time totals across every pay stub on record — use this as the default. Pass a period only if the user is asking about a specific time window.',
     input_schema: {
       type: 'object',
       properties: {
-        period: { type: 'string', enum: ['month_to_date', 'year_to_date', 'last_30_days', 'last_90_days', 'year'] },
+        period: { type: 'string', enum: ['month_to_date', 'year_to_date', 'last_30_days', 'last_90_days', 'year'], description: 'Optional. Omit to get all-time totals.' },
+      },
+      required: [],
+    },
+  },
+  {
+    name: 'list_pay_stubs',
+    description: 'Returns individual pay stub records in reverse chronological order. Use this when the user asks about a specific paycheck, their most recent pay stub, or wants to compare individual stubs. Use get_pay_stub_summary instead for period totals or savings rate calculations.',
+    input_schema: {
+      type: 'object',
+      properties: {
+        limit: { type: 'number', description: 'Maximum number of stubs to return. Defaults to 10.' },
       },
       required: [],
     },

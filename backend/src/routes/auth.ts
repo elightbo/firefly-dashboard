@@ -139,6 +139,48 @@ export async function authRoutes(app: FastifyInstance) {
     return reply.send({ ok: true });
   });
 
+  // PUT /api/auth/password — change own password
+  app.put<{ Body: { currentPassword: string; newPassword: string } }>(
+    '/auth/password',
+    {
+      schema: {
+        tags: ['Auth'],
+        summary: 'Change own password',
+        body: {
+          type: 'object',
+          required: ['currentPassword', 'newPassword'],
+          properties: {
+            currentPassword: { type: 'string', minLength: 1, maxLength: 128 },
+            newPassword:     { type: 'string', minLength: 8, maxLength: 128 },
+          },
+        },
+        response: {
+          200: { type: 'object', properties: { ok: { type: 'boolean' } } },
+          401: errorResponse,
+        },
+      },
+    },
+    async (req, reply) => {
+      try {
+        await req.jwtVerify({ onlyCookie: true });
+      } catch {
+        return reply.code(401).send({ error: 'Not authenticated' });
+      }
+
+      const { currentPassword, newPassword } = req.body;
+      const [user] = await db.select().from(users).where(eq(users.id, req.user.sub)).limit(1);
+      if (!user) return reply.code(401).send({ error: 'User not found' });
+
+      const valid = await bcrypt.compare(currentPassword, user.passwordHash);
+      if (!valid) return reply.code(401).send({ error: 'Current password is incorrect' });
+
+      const passwordHash = await bcrypt.hash(newPassword, BCRYPT_ROUNDS);
+      await db.update(users).set({ passwordHash }).where(eq(users.id, user.id));
+
+      return reply.send({ ok: true });
+    },
+  );
+
   // GET /api/auth/me
   app.get('/auth/me', {
     schema: {
