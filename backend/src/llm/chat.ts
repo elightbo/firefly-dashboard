@@ -29,23 +29,36 @@ async function getActiveLLMConfig(): Promise<ActiveLLMConfig> {
 }
 
 // ---------------------------------------------------------------------------
-// In-memory conversation store (Anthropic format only).
-// OpenAI-compatible chats are stateless for now — history support can be
-// added once a provider-agnostic message format is established.
+// In-memory conversation stores, one per provider format.
+// The system message is always rebuilt fresh each turn (memories may change),
+// so only user/assistant/tool messages are persisted.
 // ---------------------------------------------------------------------------
 const MAX_HISTORY = 40;
-const conversationStore = new Map<string, Anthropic.MessageParam[]>();
 
-function getHistory(id: string): Anthropic.MessageParam[] {
-  return conversationStore.get(id) ?? [];
+const anthropicStore = new Map<string, Anthropic.MessageParam[]>();
+const openaiStore    = new Map<string, OpenAI.Chat.ChatCompletionMessageParam[]>();
+
+function getAnthropicHistory(id: string): Anthropic.MessageParam[] {
+  return anthropicStore.get(id) ?? [];
 }
 
-function saveHistory(id: string, messages: Anthropic.MessageParam[]): void {
-  conversationStore.set(id, messages.slice(-MAX_HISTORY));
+function saveAnthropicHistory(id: string, messages: Anthropic.MessageParam[]): void {
+  anthropicStore.set(id, messages.slice(-MAX_HISTORY));
+}
+
+function getOpenAIHistory(id: string): OpenAI.Chat.ChatCompletionMessageParam[] {
+  return openaiStore.get(id) ?? [];
+}
+
+function saveOpenAIHistory(id: string, messages: OpenAI.Chat.ChatCompletionMessageParam[]): void {
+  // messages[0] is always the system prompt — skip it when saving
+  const history = messages[0]?.role === 'system' ? messages.slice(1) : messages;
+  openaiStore.set(id, history.slice(-MAX_HISTORY));
 }
 
 export function clearHistory(id: string): void {
-  conversationStore.delete(id);
+  anthropicStore.delete(id);
+  openaiStore.delete(id);
 }
 
 export type StreamEvent =
@@ -160,7 +173,7 @@ async function chatStreamAnthropic(
   const systemPrompt = await buildSystemPrompt();
 
   const messages: Anthropic.MessageParam[] = [
-    ...(conversationId ? getHistory(conversationId) : []),
+    ...(conversationId ? getAnthropicHistory(conversationId) : []),
     { role: 'user', content: question },
   ];
   const toolsUsed: string[] = [];
@@ -176,7 +189,7 @@ async function chatStreamAnthropic(
     messages.push({ role: 'assistant', content: response.content });
 
     if (response.stop_reason === 'end_turn') {
-      if (conversationId) saveHistory(conversationId, messages);
+      if (conversationId) saveAnthropicHistory(conversationId, messages);
       onEvent({ type: 'done', toolsUsed });
       return;
     }
@@ -202,15 +215,15 @@ async function chatStreamAnthropic(
     break;
   }
 
-  if (conversationId) saveHistory(conversationId, messages);
+  if (conversationId) saveAnthropicHistory(conversationId, messages);
   onEvent({ type: 'done', toolsUsed });
 }
 
 // ---------------------------------------------------------------------------
 // OpenAI-compatible streaming path (Ollama, OpenRouter, etc.)
-// Conversation history is stateless per-turn for now.
 // ---------------------------------------------------------------------------
 async function chatStreamOpenAI(
+  conversationId: string | null,
   question: string,
   onEvent: (event: StreamEvent) => void,
   signal: AbortSignal | undefined,
@@ -228,6 +241,7 @@ async function chatStreamOpenAI(
 
   const messages: OpenAI.Chat.ChatCompletionMessageParam[] = [
     { role: 'system', content: systemPrompt },
+    ...(conversationId ? getOpenAIHistory(conversationId) : []),
     { role: 'user', content: question },
   ];
 
@@ -266,6 +280,7 @@ async function chatStreamOpenAI(
 
     if (toolCalls.length === 0) {
       // Model finished without requesting any tools.
+      if (conversationId) saveOpenAIHistory(conversationId, messages);
       onEvent({ type: 'done', toolsUsed });
       return;
     }
@@ -296,6 +311,7 @@ async function chatStreamOpenAI(
     }
   }
 
+  if (conversationId) saveOpenAIHistory(conversationId, messages);
   onEvent({ type: 'done', toolsUsed });
 }
 
@@ -311,7 +327,7 @@ export async function chatStream(
   const config = await getActiveLLMConfig();
 
   if (config.provider === 'openai_compatible') {
-    return chatStreamOpenAI(question, onEvent, signal, config);
+    return chatStreamOpenAI(conversationId, question, onEvent, signal, config);
   }
 
   return chatStreamAnthropic(conversationId, question, onEvent, signal, config);
