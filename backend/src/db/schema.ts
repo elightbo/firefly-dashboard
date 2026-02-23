@@ -6,6 +6,7 @@ import {
   timestamp,
   boolean,
   serial,
+  integer,
   uniqueIndex,
 } from 'drizzle-orm/pg-core';
 
@@ -71,6 +72,18 @@ export const users = pgTable('users', {
   createdAt:    timestamp('created_at').notNull().defaultNow(),
 }, (table) => ({
   usernameIdx: uniqueIndex('users_username_idx').on(table.username),
+}));
+
+// ---------------------------------------------------------------------------
+// User Preferences — per-user key/value store (e.g. pinned budgets)
+// ---------------------------------------------------------------------------
+export const userPreferences = pgTable('user_preferences', {
+  id:     serial('id').primaryKey(),
+  userId: integer('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  key:    text('key').notNull(),
+  value:  text('value').notNull(),
+}, (table) => ({
+  userKeyIdx: uniqueIndex('user_preferences_user_key_idx').on(table.userId, table.key),
 }));
 
 // ---------------------------------------------------------------------------

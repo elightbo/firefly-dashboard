@@ -20,7 +20,7 @@ export interface AuthUser {
 export const api = createApi({
   reducerPath: 'api',
   baseQuery: fetchBaseQuery({ baseUrl: '/api' }),
-  tagTypes: ['FinancialData', 'Auth'],
+  tagTypes: ['FinancialData', 'Auth', 'Prefs'],
   endpoints: (builder) => ({
     getNetWorth: builder.query<NetWorthResult, void>({
       query: () => '/functions/net-worth',
@@ -104,6 +104,18 @@ export const api = createApi({
       }),
       invalidatesTags: ['Auth'],
     }),
+    getPinnedBudgets: builder.query<string[], void>({
+      query: () => '/prefs/pinned-budgets',
+      providesTags: ['Prefs'],
+    }),
+    setPinnedBudgets: builder.mutation<{ ok: boolean }, { names: string[] }>({
+      query: (body) => ({
+        url: '/prefs/pinned-budgets',
+        method: 'PUT',
+        body,
+      }),
+      invalidatesTags: ['Prefs'],
+    }),
   }),
 })
 
@@ -123,4 +135,6 @@ export const {
   useGetUsersQuery,
   useCreateUserMutation,
   useDeleteUserMutation,
+  useGetPinnedBudgetsQuery,
+  useSetPinnedBudgetsMutation,
 } = api

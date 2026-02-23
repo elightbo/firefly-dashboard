@@ -36,6 +36,13 @@
       "when": 1771802370508,
       "tag": "0004_stale_praxagora",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1771806519289,
+      "tag": "0005_petite_black_crow",
+      "breakpoints": true
     }
   ]
 }

@@ -16,6 +16,7 @@ import { functionRoutes } from './routes/functions.js';
 import { chatRoutes } from './routes/chat.js';
 import { authRoutes } from './routes/auth.js';
 import { adminRoutes } from './routes/admin.js';
+import { prefsRoutes } from './routes/prefs.js';
 import { runSync } from './sync/index.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -95,7 +96,8 @@ app.addHook('preHandler', async (req, reply) => {
     req.url.startsWith('/api/functions') ||
     req.url.startsWith('/api/sync') ||
     req.url.startsWith('/api/chat') ||
-    req.url.startsWith('/api/admin');
+    req.url.startsWith('/api/admin') ||
+    req.url.startsWith('/api/prefs');
   if (!isProtected) return;
   try {
     await req.jwtVerify({ onlyCookie: true });
@@ -108,6 +110,7 @@ await app.register(syncRoutes, { prefix: '/api' });
 await app.register(functionRoutes, { prefix: '/api' });
 await app.register(chatRoutes, { prefix: '/api' });
 await app.register(adminRoutes, { prefix: '/api' });
+await app.register(prefsRoutes, { prefix: '/api' });
 
 // Serve the built frontend in production (when ./public exists).
 const publicDir = join(__dirname, '..', 'public');

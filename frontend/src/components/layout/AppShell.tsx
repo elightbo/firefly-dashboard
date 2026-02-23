@@ -1,5 +1,5 @@
 import { NavLink, Outlet, useNavigate } from 'react-router-dom'
-import { LayoutDashboard, MessageSquare, TrendingUp, RefreshCw, ClipboardList, LogOut, Settings } from 'lucide-react'
+import { LayoutDashboard, MessageSquare, TrendingUp, RefreshCw, ClipboardList, LogOut, Settings, Bookmark } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useState } from 'react'
 import { useDispatch } from 'react-redux'
@@ -10,6 +10,7 @@ const navItems = [
   { to: '/ask', label: 'Ask', icon: MessageSquare },
   { to: '/trends', label: 'Trends', icon: TrendingUp },
   { to: '/report', label: 'Report', icon: ClipboardList },
+  { to: '/my-budgets', label: 'My Budgets', icon: Bookmark },
 ]
 
 export function AppShell() {

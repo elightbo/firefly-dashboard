@@ -7,6 +7,7 @@ import { QAConsole } from '@/pages/QAConsole'
 import { Trends } from '@/pages/Trends'
 import { Report } from '@/pages/Report'
 import { Settings } from '@/pages/Settings'
+import { MyBudgets } from '@/pages/MyBudgets'
 
 export default function App() {
   return (
@@ -19,6 +20,7 @@ export default function App() {
           <Route path="trends" element={<Trends />} />
           <Route path="report" element={<Report />} />
           <Route path="settings" element={<Settings />} />
+          <Route path="my-budgets" element={<MyBudgets />} />
         </Route>
       </Route>
     </Routes>
