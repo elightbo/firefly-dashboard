@@ -17,13 +17,27 @@ import { chatRoutes } from './routes/chat.js';
 import { authRoutes } from './routes/auth.js';
 import { adminRoutes } from './routes/admin.js';
 import { prefsRoutes } from './routes/prefs.js';
+import { payStubRoutes } from './routes/payStubs.js';
+import bcrypt from 'bcryptjs';
+import { count } from 'drizzle-orm';
 import { runSync } from './sync/index.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
 // Run migrations on startup — no-op if already applied.
 import { db } from './db/index.js';
+import { users } from './db/schema.js';
 await migrate(db, { migrationsFolder: join(__dirname, '..', 'drizzle') });
+
+// Seed a default admin account on first boot so the UI is immediately accessible.
+{
+  const [{ value: userCount }] = await db.select({ value: count() }).from(users);
+  if (Number(userCount) === 0) {
+    const passwordHash = await bcrypt.hash('changeme', 12);
+    await db.insert(users).values({ username: 'admin', passwordHash });
+    console.log('[startup] No users found — created default account (admin / changeme). Create a real account in Settings and delete this one.');
+  }
+}
 
 const app = Fastify({ logger: true });
 
@@ -97,7 +111,8 @@ app.addHook('preHandler', async (req, reply) => {
     req.url.startsWith('/api/sync') ||
     req.url.startsWith('/api/chat') ||
     req.url.startsWith('/api/admin') ||
-    req.url.startsWith('/api/prefs');
+    req.url.startsWith('/api/prefs') ||
+    req.url.startsWith('/api/pay-stubs');
   if (!isProtected) return;
   try {
     await req.jwtVerify({ onlyCookie: true });
@@ -111,6 +126,7 @@ await app.register(functionRoutes, { prefix: '/api' });
 await app.register(chatRoutes, { prefix: '/api' });
 await app.register(adminRoutes, { prefix: '/api' });
 await app.register(prefsRoutes, { prefix: '/api' });
+await app.register(payStubRoutes, { prefix: '/api' });
 
 // Serve the built frontend in production (when ./public exists).
 const publicDir = join(__dirname, '..', 'public');

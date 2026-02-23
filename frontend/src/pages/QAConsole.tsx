@@ -1,17 +1,23 @@
-import { useState, useRef, useEffect, type FormEvent } from 'react'
-import { Send, Bot, User, Loader2 } from 'lucide-react'
+import { useState, useRef, useEffect, useCallback, type FormEvent } from 'react'
+import { Send, Bot, User, Loader2, SquarePen } from 'lucide-react'
 import { Card } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { ScrollArea } from '@/components/ui/scroll-area'
-import { useChatMutation } from '@/store/api'
 
 interface Message {
   role: 'user' | 'assistant'
   content: string
   toolsUsed?: string[]
+  streaming?: boolean
 }
+
+type StreamEvent =
+  | { type: 'text'; text: string }
+  | { type: 'tool'; name: string }
+  | { type: 'done'; toolsUsed: string[] }
+  | { type: 'error'; message: string }
 
 const SUGGESTIONS = [
   'What is my net worth?',
@@ -24,31 +30,111 @@ const SUGGESTIONS = [
 export function QAConsole() {
   const [messages, setMessages] = useState<Message[]>([])
   const [input, setInput] = useState('')
-  const [chat, { isLoading }] = useChatMutation()
+  const [isStreaming, setIsStreaming] = useState(false)
+  const [conversationId, setConversationId] = useState(() => crypto.randomUUID())
   const bottomRef = useRef<HTMLDivElement>(null)
+  const abortRef = useRef<AbortController | null>(null)
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages])
 
-  async function handleSubmit(question: string) {
-    if (!question.trim() || isLoading) return
+  const handleSubmit = useCallback(async (question: string) => {
+    if (!question.trim() || isStreaming) return
 
-    const userMessage: Message = { role: 'user', content: question.trim() }
-    setMessages(prev => [...prev, userMessage])
+    setMessages(prev => [
+      ...prev,
+      { role: 'user', content: question.trim() },
+      { role: 'assistant', content: '', toolsUsed: [], streaming: true },
+    ])
     setInput('')
+    setIsStreaming(true)
+
+    const ac = new AbortController()
+    abortRef.current = ac
 
     try {
-      const result = await chat(question.trim()).unwrap()
-      setMessages(prev => [
-        ...prev,
-        { role: 'assistant', content: result.answer, toolsUsed: result.toolsUsed },
-      ])
-    } catch {
-      setMessages(prev => [
-        ...prev,
-        { role: 'assistant', content: 'Sorry, something went wrong. Please try again.' },
-      ])
+      const response = await fetch('/api/chat/stream', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ question: question.trim(), conversationId }),
+        signal: ac.signal,
+      })
+
+      if (!response.ok || !response.body) throw new Error('Request failed')
+
+      const reader = response.body.getReader()
+      const decoder = new TextDecoder()
+      let buffer = ''
+
+      while (true) {
+        const { done, value } = await reader.read()
+        if (done) break
+
+        buffer += decoder.decode(value, { stream: true })
+        const parts = buffer.split('\n\n')
+        buffer = parts.pop() ?? ''
+
+        for (const block of parts) {
+          for (const line of block.split('\n')) {
+            if (!line.startsWith('data: ')) continue
+            try {
+              const event: StreamEvent = JSON.parse(line.slice(6))
+              handleEvent(event)
+            } catch { /* skip malformed */ }
+          }
+        }
+      }
+    } catch (err) {
+      if ((err as Error).name !== 'AbortError') {
+        setMessages(prev => {
+          const last = prev[prev.length - 1]
+          if (!last || last.role !== 'assistant') return prev
+          return [
+            ...prev.slice(0, -1),
+            { ...last, content: 'Sorry, something went wrong. Please try again.', streaming: false },
+          ]
+        })
+      }
+    } finally {
+      setIsStreaming(false)
+      setMessages(prev =>
+        prev.map(m => (m.streaming ? { ...m, streaming: false } : m))
+      )
+      abortRef.current = null
+    }
+  }, [isStreaming])
+
+  function handleEvent(event: StreamEvent) {
+    switch (event.type) {
+      case 'text':
+        setMessages(prev => {
+          const last = prev[prev.length - 1]
+          if (!last || last.role !== 'assistant') return prev
+          return [...prev.slice(0, -1), { ...last, content: last.content + event.text }]
+        })
+        break
+      case 'tool':
+        setMessages(prev => {
+          const last = prev[prev.length - 1]
+          if (!last || last.role !== 'assistant') return prev
+          return [...prev.slice(0, -1), { ...last, toolsUsed: [...(last.toolsUsed ?? []), event.name] }]
+        })
+        break
+      case 'done':
+        setMessages(prev => {
+          const last = prev[prev.length - 1]
+          if (!last || last.role !== 'assistant') return prev
+          return [...prev.slice(0, -1), { ...last, toolsUsed: event.toolsUsed, streaming: false }]
+        })
+        break
+      case 'error':
+        setMessages(prev => {
+          const last = prev[prev.length - 1]
+          if (!last || last.role !== 'assistant') return prev
+          return [...prev.slice(0, -1), { ...last, content: `Error: ${event.message}`, streaming: false }]
+        })
+        break
     }
   }
 
@@ -57,13 +143,31 @@ export function QAConsole() {
     handleSubmit(input)
   }
 
+  function handleNewChat() {
+    abortRef.current?.abort()
+    // Best-effort clear of server-side history; don't await
+    fetch(`/api/chat/history/${conversationId}`, { method: 'DELETE' }).catch(() => {})
+    setConversationId(crypto.randomUUID())
+    setMessages([])
+    setInput('')
+    setIsStreaming(false)
+  }
+
   return (
     <div className="max-w-3xl mx-auto space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold tracking-tight">Ask</h1>
-        <p className="text-muted-foreground text-sm mt-1">
-          Ask questions about your finances in plain English.
-        </p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight">Ask</h1>
+          <p className="text-muted-foreground text-sm mt-1">
+            Ask questions about your finances in plain English.
+          </p>
+        </div>
+        {messages.length > 0 && (
+          <Button variant="outline" size="sm" onClick={handleNewChat} disabled={isStreaming}>
+            <SquarePen className="h-4 w-4 mr-1.5" />
+            New Chat
+          </Button>
+        )}
       </div>
 
       <Card className="flex flex-col h-[calc(100vh-240px)] min-h-[400px]">
@@ -106,7 +210,16 @@ export function QAConsole() {
                           : 'bg-muted text-foreground rounded-tl-sm'
                       }`}
                     >
-                      {msg.content}
+                      {msg.role === 'assistant' && msg.streaming && msg.content === '' ? (
+                        <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+                      ) : (
+                        <>
+                          {msg.content}
+                          {msg.streaming && (
+                            <span className="inline-block w-[2px] h-[14px] bg-current ml-0.5 align-middle animate-pulse" />
+                          )}
+                        </>
+                      )}
                     </div>
                     {msg.toolsUsed && msg.toolsUsed.length > 0 && (
                       <div className="flex flex-wrap gap-1 px-1">
@@ -125,16 +238,6 @@ export function QAConsole() {
                   )}
                 </div>
               ))}
-              {isLoading && (
-                <div className="flex gap-3 justify-start">
-                  <div className="h-7 w-7 rounded-full bg-primary/10 flex items-center justify-center shrink-0 mt-0.5">
-                    <Bot className="h-4 w-4 text-primary" />
-                  </div>
-                  <div className="bg-muted rounded-2xl rounded-tl-sm px-4 py-3">
-                    <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
-                  </div>
-                </div>
-              )}
               <div ref={bottomRef} />
             </div>
           )}
@@ -146,12 +249,12 @@ export function QAConsole() {
               value={input}
               onChange={e => setInput(e.target.value)}
               placeholder="Ask about your finances…"
-              disabled={isLoading}
+              disabled={isStreaming}
               className="flex-1"
               autoFocus
             />
-            <Button type="submit" size="icon" disabled={!input.trim() || isLoading}>
-              {isLoading ? (
+            <Button type="submit" size="icon" disabled={!input.trim() || isStreaming}>
+              {isStreaming ? (
                 <Loader2 className="h-4 w-4 animate-spin" />
               ) : (
                 <Send className="h-4 w-4" />

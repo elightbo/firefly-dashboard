@@ -11,6 +11,8 @@ import {
   getMonthlyOverview,
   getMonthlyBudgetSpending,
   getMonthlyBudgetReport,
+  getPayStubSummary,
+  getNetWorthHistory,
   type Period,
 } from '../functions/index.js';
 
@@ -142,4 +144,30 @@ export async function functionRoutes(app: FastifyInstance) {
       },
     },
   }, async (req) => getMonthlyBudgetSpending(req.query.months));
+
+  // GET /functions/net-worth-history
+  app.get<{ Querystring: { months?: number } }>('/functions/net-worth-history', {
+    schema: {
+      tags: ['Functions'],
+      summary: 'Historical net worth snapshots (one per sync day)',
+      querystring: {
+        type: 'object',
+        properties: {
+          months: { type: 'integer', minimum: 1, maximum: 60, default: 12, description: 'Number of months of history to return' },
+        },
+      },
+    },
+  }, async (req) => getNetWorthHistory(req.query.months));
+
+  // GET /functions/pay-stub-summary
+  app.get<{ Querystring: { period?: Period } }>('/functions/pay-stub-summary', {
+    schema: {
+      tags: ['Functions'],
+      summary: 'Household gross income and pre-tax savings summary for a period',
+      querystring: {
+        type: 'object',
+        properties: { period: periodParam },
+      },
+    },
+  }, async (req) => getPayStubSummary(req.query.period));
 }

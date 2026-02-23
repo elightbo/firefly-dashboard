@@ -1,6 +1,7 @@
 import { createApi, fetchBaseQuery } from '@reduxjs/toolkit/query/react'
 import type {
   NetWorthResult,
+  NetWorthSnapshot,
   PiggyBankStatusResult,
   BudgetStatusResult,
   IncomeAllocationResult,
@@ -10,17 +11,20 @@ import type {
   MonthlyBudgetReportResult,
   ChatResult,
   Period,
+  PayStub,
+  PayStubSummaryResult,
 } from '@/types'
 
 export interface AuthUser {
   id: number
   username: string
+  isDefault?: boolean
 }
 
 export const api = createApi({
   reducerPath: 'api',
   baseQuery: fetchBaseQuery({ baseUrl: '/api' }),
-  tagTypes: ['FinancialData', 'Auth', 'Prefs'],
+  tagTypes: ['FinancialData', 'Auth', 'Prefs', 'PayStubs'],
   endpoints: (builder) => ({
     getNetWorth: builder.query<NetWorthResult, void>({
       query: () => '/functions/net-worth',
@@ -55,6 +59,10 @@ export const api = createApi({
       query: (months = 12) => `/functions/monthly-overview?months=${months}`,
       providesTags: ['FinancialData'],
     }),
+    getNetWorthHistory: builder.query<NetWorthSnapshot[], number | void>({
+      query: (months = 12) => `/functions/net-worth-history?months=${months}`,
+      providesTags: ['FinancialData'],
+    }),
     getMonthlyBudgetSpending: builder.query<MonthlyBudgetSpendingResult, number | void>({
       query: (months = 12) => `/functions/monthly-budget-spending?months=${months}`,
       providesTags: ['FinancialData'],
@@ -69,6 +77,9 @@ export const api = createApi({
     getMe: builder.query<AuthUser, void>({
       query: () => '/auth/me',
       providesTags: ['Auth'],
+    }),
+    getSetupNeeded: builder.query<{ setupNeeded: boolean }, void>({
+      query: () => '/auth/setup-needed',
     }),
     login: builder.mutation<AuthUser, { username: string; password: string }>({
       query: (credentials) => ({
@@ -104,6 +115,34 @@ export const api = createApi({
       }),
       invalidatesTags: ['Auth'],
     }),
+    getPayStubs: builder.query<PayStub[], { year?: string } | void>({
+      query: (params) => {
+        const p = new URLSearchParams()
+        if (params?.year) p.set('year', params.year)
+        const qs = p.toString()
+        return `/pay-stubs${qs ? `?${qs}` : ''}`
+      },
+      providesTags: ['PayStubs'],
+    }),
+    createPayStub: builder.mutation<PayStub, Omit<PayStub, 'id' | 'userId' | 'createdAt'>>({
+      query: (body) => ({
+        url: '/pay-stubs',
+        method: 'POST',
+        body,
+      }),
+      invalidatesTags: ['PayStubs'],
+    }),
+    deletePayStub: builder.mutation<{ ok: boolean }, number>({
+      query: (id) => ({
+        url: `/pay-stubs/${id}`,
+        method: 'DELETE',
+      }),
+      invalidatesTags: ['PayStubs'],
+    }),
+    getPayStubSummary: builder.query<PayStubSummaryResult, Period | void>({
+      query: (period = 'year_to_date') => `/functions/pay-stub-summary?period=${period}`,
+      providesTags: ['FinancialData', 'PayStubs'],
+    }),
     getPinnedBudgets: builder.query<string[], void>({
       query: () => '/prefs/pinned-budgets',
       providesTags: ['Prefs'],
@@ -120,6 +159,7 @@ export const api = createApi({
 })
 
 export const {
+  useGetSetupNeededQuery,
   useGetNetWorthQuery,
   useGetPiggyBanksQuery,
   useGetBudgetsQuery,
@@ -128,6 +168,7 @@ export const {
   useGetMonthlyOverviewQuery,
   useGetMonthlyBudgetSpendingQuery,
   useGetMonthlyBudgetReportQuery,
+  useGetNetWorthHistoryQuery,
   useChatMutation,
   useGetMeQuery,
   useLoginMutation,
@@ -137,4 +178,8 @@ export const {
   useDeleteUserMutation,
   useGetPinnedBudgetsQuery,
   useSetPinnedBudgetsMutation,
+  useGetPayStubsQuery,
+  useCreatePayStubMutation,
+  useDeletePayStubMutation,
+  useGetPayStubSummaryQuery,
 } = api

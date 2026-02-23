@@ -75,3 +75,32 @@ export interface MonthlyBudgetSpendingResult {
 }
 
 export type Period = 'month_to_date' | 'year_to_date' | 'last_30_days' | 'last_90_days' | 'year'
+
+export interface NetWorthSnapshot {
+  date: string
+  total: number
+}
+
+export interface PayStub {
+  id: number
+  userId: number
+  payDate: string
+  employer: string
+  gross: number
+  retirement: number
+  employerMatch: number
+  stockOptions: number
+  notes: string | null
+  createdAt: string
+}
+
+export interface PayStubSummaryResult {
+  period: { start: string; end: string }
+  grossIncome: number
+  retirementContributions: number
+  employerMatch: number
+  stockOptions: number
+  preTaxSavings: number
+  preTaxSavingsRate: number
+  byEmployer: Array<{ employer: string; gross: number; preTaxSavings: number }>
+}

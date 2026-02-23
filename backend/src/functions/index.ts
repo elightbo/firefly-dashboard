@@ -8,4 +8,6 @@ export { rememberFact, listMemories } from './memory.js';
 export { getMonthlyOverview } from './getMonthlyOverview.js';
 export { getMonthlyBudgetSpending } from './getMonthlyBudgetSpending.js';
 export { getMonthlyBudgetReport } from './getMonthlyBudgetReport.js';
+export { getPayStubSummary } from './getPayStubSummary.js';
+export { getNetWorthHistory } from './getNetWorthHistory.js';
 export type { Period } from './utils.js';

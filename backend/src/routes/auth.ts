@@ -1,6 +1,6 @@
 import type { FastifyInstance } from 'fastify';
 import bcrypt from 'bcryptjs';
-import { eq, count } from 'drizzle-orm';
+import { eq, count, and } from 'drizzle-orm';
 import { db } from '../db/index.js';
 import { users } from '../db/schema.js';
 
@@ -19,8 +19,9 @@ const credentialsBody = {
 const userResponse = {
   type: 'object',
   properties: {
-    id:       { type: 'number' },
-    username: { type: 'string' },
+    id:        { type: 'number' },
+    username:  { type: 'string' },
+    isDefault: { type: 'boolean' },
   },
 } as const;
 
@@ -30,6 +31,24 @@ const errorResponse = {
 } as const;
 
 export async function authRoutes(app: FastifyInstance) {
+
+  // GET /api/auth/setup-needed — unprotected; tells the UI whether the default account is still in place
+  app.get('/auth/setup-needed', {
+    schema: {
+      tags: ['Auth'],
+      summary: 'Returns true if only the default admin account exists (first-boot state)',
+      response: {
+        200: { type: 'object', properties: { setupNeeded: { type: 'boolean' } } },
+      },
+    },
+  }, async () => {
+    const [{ value: total }] = await db.select({ value: count() }).from(users);
+    const [{ value: adminCount }] = await db
+      .select({ value: count() })
+      .from(users)
+      .where(eq(users.username, 'admin'));
+    return { setupNeeded: Number(total) === 1 && Number(adminCount) === 1 };
+  });
 
   // POST /api/auth/register — only works when 0 users exist
   app.post<{ Body: { username: string; password: string } }>(
@@ -133,6 +152,7 @@ export async function authRoutes(app: FastifyInstance) {
     } catch {
       return reply.code(401).send({ error: 'Not authenticated' });
     }
-    return reply.send({ id: req.user.sub, username: req.user.username });
+    const isDefault = req.user.username === 'admin';
+    return reply.send({ id: req.user.sub, username: req.user.username, isDefault });
   });
 }

@@ -87,4 +87,26 @@ export const tools: Anthropic.Tool[] = [
       required: ['fact'],
     },
   },
+  {
+    name: 'get_net_worth_history',
+    description: 'Returns historical net worth snapshots (one per sync day) for the last N months. Use this to answer questions about net worth trends, growth rate, or how net worth has changed over time.',
+    input_schema: {
+      type: 'object',
+      properties: {
+        months: { type: 'number', description: 'Number of months of history to return. Defaults to 12.' },
+      },
+      required: [],
+    },
+  },
+  {
+    name: 'get_pay_stub_summary',
+    description: 'Returns household gross income and pre-tax savings (retirement contributions, employer match, stock options/ESPP) for a period. Combine with analyze_income_allocation to calculate the true total savings rate including pre-tax contributions.',
+    input_schema: {
+      type: 'object',
+      properties: {
+        period: { type: 'string', enum: ['month_to_date', 'year_to_date', 'last_30_days', 'last_90_days', 'year'] },
+      },
+      required: [],
+    },
+  },
 ];

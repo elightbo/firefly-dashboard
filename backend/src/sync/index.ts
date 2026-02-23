@@ -4,6 +4,8 @@ import { syncPiggyBanks } from './syncPiggyBanks.js';
 import { syncBudgets } from './syncBudgets.js';
 import { syncTransactions } from './syncTransactions.js';
 import { buildPiggyBankMap } from './buildPiggyBankMap.js';
+import { snapshotNetWorth } from './snapshotNetWorth.js';
+import { backfillNetWorth } from './backfillNetWorth.js';
 
 export interface SyncResult {
   accounts: number;
@@ -36,6 +38,12 @@ export async function runSync(): Promise<SyncResult> {
 
   const transactionCount = await syncTransactions(client, piggyBankMap);
   console.log(`[sync] Transactions: ${transactionCount}`);
+
+  await snapshotNetWorth();
+  console.log('[sync] Net worth snapshot written');
+
+  const backfilled = await backfillNetWorth();
+  if (backfilled > 0) console.log(`[sync] Backfilled ${backfilled} historical net worth snapshots`);
 
   const durationMs = Date.now() - start;
   console.log(`[sync] Done in ${durationMs}ms`);

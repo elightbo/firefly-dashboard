@@ -1,10 +1,11 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { useLoginMutation, useGetMeQuery } from '@/store/api'
+import { useLoginMutation, useGetMeQuery, useGetSetupNeededQuery } from '@/store/api'
 
 export function Login() {
   const navigate = useNavigate()
   const { data: me, isLoading: checkingSession } = useGetMeQuery()
+  const { data: setupData } = useGetSetupNeededQuery()
   const [login, { isLoading, error }] = useLoginMutation()
 
   const [username, setUsername] = useState('')
@@ -74,6 +75,13 @@ export function Login() {
             {isLoading ? 'Signing in…' : 'Sign in'}
           </button>
         </form>
+        {setupData?.setupNeeded && (
+          <p className="mt-5 text-xs text-muted-foreground text-center border-t pt-4">
+            First time? Default credentials:{' '}
+            <span className="font-mono">admin</span> /{' '}
+            <span className="font-mono">changeme</span>
+          </p>
+        )}
       </div>
     </div>
   )

@@ -87,6 +87,32 @@ export const userPreferences = pgTable('user_preferences', {
 }));
 
 // ---------------------------------------------------------------------------
+// Net Worth Snapshots — one row per day written by sync, used for history chart
+// ---------------------------------------------------------------------------
+export const netWorthSnapshots = pgTable('net_worth_snapshots', {
+  id:        serial('id').primaryKey(),
+  date:      date('date').notNull().unique(),
+  total:     numeric('total', { precision: 15, scale: 4 }).notNull(),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+});
+
+// ---------------------------------------------------------------------------
+// Pay Stubs — manual gross income + pre-tax deductions per earner
+// ---------------------------------------------------------------------------
+export const payStubs = pgTable('pay_stubs', {
+  id:            serial('id').primaryKey(),
+  userId:        integer('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  payDate:       date('pay_date').notNull(),
+  employer:      text('employer').notNull(),
+  gross:         numeric('gross', { precision: 15, scale: 4 }).notNull(),
+  retirement:    numeric('retirement', { precision: 15, scale: 4 }).notNull().default('0'),
+  employerMatch: numeric('employer_match', { precision: 15, scale: 4 }).notNull().default('0'),
+  stockOptions:  numeric('stock_options', { precision: 15, scale: 4 }).notNull().default('0'),
+  notes:         text('notes'),
+  createdAt:     timestamp('created_at').notNull().defaultNow(),
+});
+
+// ---------------------------------------------------------------------------
 // Budgets
 // ---------------------------------------------------------------------------
 export const budgets = pgTable('budgets', {

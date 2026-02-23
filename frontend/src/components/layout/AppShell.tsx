@@ -1,5 +1,5 @@
 import { NavLink, Outlet, useNavigate } from 'react-router-dom'
-import { LayoutDashboard, MessageSquare, TrendingUp, RefreshCw, ClipboardList, LogOut, Settings, Bookmark } from 'lucide-react'
+import { LayoutDashboard, MessageSquare, TrendingUp, RefreshCw, ClipboardList, LogOut, Settings, Bookmark, Receipt, TriangleAlert } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useState } from 'react'
 import { useDispatch } from 'react-redux'
@@ -11,6 +11,7 @@ const navItems = [
   { to: '/trends', label: 'Trends', icon: TrendingUp },
   { to: '/report', label: 'Report', icon: ClipboardList },
   { to: '/my-budgets', label: 'My Budgets', icon: Bookmark },
+  { to: '/pay-stubs', label: 'Pay Stubs', icon: Receipt },
 ]
 
 export function AppShell() {
@@ -97,6 +98,17 @@ export function AppShell() {
           </button>
         </div>
       </header>
+      {me?.isDefault && (
+        <div className="bg-amber-50 border-b border-amber-200 px-6 py-2 flex items-center gap-2 text-sm text-amber-800">
+          <TriangleAlert className="h-4 w-4 shrink-0" />
+          <span>
+            You're using the default <span className="font-mono font-semibold">admin</span> account.
+            Create a real user in{' '}
+            <NavLink to="/settings" className="underline underline-offset-2 font-medium">Settings</NavLink>
+            {' '}and then delete this one.
+          </span>
+        </div>
+      )}
       <main className="p-6">
         <Outlet />
       </main>
