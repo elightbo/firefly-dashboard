@@ -5,6 +5,8 @@ import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { ScrollArea } from '@/components/ui/scroll-area'
+import ReactMarkdown from 'react-markdown'
+import remarkGfm from 'remark-gfm'
 
 interface Message {
   role: 'user' | 'assistant'
@@ -235,12 +237,18 @@ export function QAConsole() {
                     >
                       {msg.role === 'assistant' && msg.streaming && msg.content === '' ? (
                         <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
-                      ) : (
-                        <>
-                          {msg.content}
+                      ) : msg.role === 'assistant' ? (
+                        <div className="prose prose-sm dark:prose-invert max-w-none prose-p:my-1 prose-ul:my-1 prose-ol:my-1 prose-li:my-0 prose-headings:my-2 prose-pre:my-2 prose-code:text-xs prose-pre:bg-muted prose-pre:border">
+                          <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                            {msg.content}
+                          </ReactMarkdown>
                           {msg.streaming && (
                             <span className="inline-block w-[2px] h-[14px] bg-current ml-0.5 align-middle animate-pulse" />
                           )}
+                        </div>
+                      ) : (
+                        <>
+                          {msg.content}
                         </>
                       )}
                     </div>
