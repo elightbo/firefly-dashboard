@@ -10,6 +10,7 @@ interface PayStubBody {
   retirement: number;
   employerMatch: number;
   stockOptions: number;
+  netPay?: number;
   notes?: string;
 }
 
@@ -50,6 +51,7 @@ export async function payStubRoutes(app: FastifyInstance) {
       retirement: parseFloat(r.retirement),
       employerMatch: parseFloat(r.employerMatch),
       stockOptions: parseFloat(r.stockOptions),
+      netPay: r.netPay != null ? parseFloat(r.netPay) : null,
       notes: r.notes,
       createdAt: r.createdAt,
     }));
@@ -70,13 +72,14 @@ export async function payStubRoutes(app: FastifyInstance) {
           retirement:    { type: 'number' },
           employerMatch: { type: 'number' },
           stockOptions:  { type: 'number' },
+          netPay:        { type: 'number' },
           notes:         { type: 'string' },
         },
       },
     },
   }, async (req, reply) => {
     const userId = (req.user as { sub: number }).sub;
-    const { payDate, employer, gross, retirement, employerMatch, stockOptions, notes } = req.body;
+    const { payDate, employer, gross, retirement, employerMatch, stockOptions, netPay, notes } = req.body;
 
     const [created] = await db.insert(payStubs).values({
       userId,
@@ -86,6 +89,7 @@ export async function payStubRoutes(app: FastifyInstance) {
       retirement: String(retirement),
       employerMatch: String(employerMatch),
       stockOptions: String(stockOptions),
+      netPay: netPay != null ? String(netPay) : null,
       notes: notes ?? null,
     }).returning();
 
@@ -98,9 +102,68 @@ export async function payStubRoutes(app: FastifyInstance) {
       retirement: parseFloat(created.retirement),
       employerMatch: parseFloat(created.employerMatch),
       stockOptions: parseFloat(created.stockOptions),
+      netPay: created.netPay != null ? parseFloat(created.netPay) : null,
       notes: created.notes,
       createdAt: created.createdAt,
     });
+  });
+
+  // PUT /api/pay-stubs/:id
+  app.put<{ Params: { id: string }; Body: PayStubBody }>('/pay-stubs/:id', {
+    schema: {
+      tags: ['Pay Stubs'],
+      summary: 'Update a pay stub (own stubs only)',
+      params: { type: 'object', properties: { id: { type: 'string' } } },
+      body: {
+        type: 'object',
+        required: ['payDate', 'employer', 'gross', 'retirement', 'employerMatch', 'stockOptions'],
+        properties: {
+          payDate:       { type: 'string' },
+          employer:      { type: 'string' },
+          gross:         { type: 'number' },
+          retirement:    { type: 'number' },
+          employerMatch: { type: 'number' },
+          stockOptions:  { type: 'number' },
+          netPay:        { type: 'number' },
+          notes:         { type: 'string' },
+        },
+      },
+    },
+  }, async (req, reply) => {
+    const userId = (req.user as { sub: number }).sub;
+    const stubId = parseInt(req.params.id, 10);
+    const { payDate, employer, gross, retirement, employerMatch, stockOptions, netPay, notes } = req.body;
+
+    const [updated] = await db
+      .update(payStubs)
+      .set({
+        payDate,
+        employer,
+        gross: String(gross),
+        retirement: String(retirement),
+        employerMatch: String(employerMatch),
+        stockOptions: String(stockOptions),
+        netPay: netPay != null ? String(netPay) : null,
+        notes: notes ?? null,
+      })
+      .where(and(eq(payStubs.id, stubId), eq(payStubs.userId, userId)))
+      .returning();
+
+    if (!updated) return reply.code(404).send({ error: 'Not found or not authorized' });
+
+    return {
+      id: updated.id,
+      userId: updated.userId,
+      payDate: updated.payDate,
+      employer: updated.employer,
+      gross: parseFloat(updated.gross),
+      retirement: parseFloat(updated.retirement),
+      employerMatch: parseFloat(updated.employerMatch),
+      stockOptions: parseFloat(updated.stockOptions),
+      netPay: updated.netPay != null ? parseFloat(updated.netPay) : null,
+      notes: updated.notes,
+      createdAt: updated.createdAt,
+    };
   });
 
   // DELETE /api/pay-stubs/:id

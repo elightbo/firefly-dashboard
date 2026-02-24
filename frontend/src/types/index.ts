@@ -90,6 +90,7 @@ export interface PayStub {
   retirement: number
   employerMatch: number
   stockOptions: number
+  netPay: number | null
   notes: string | null
   createdAt: string
 }

@@ -1,0 +1,1 @@
+ALTER TABLE "pay_stubs" ADD COLUMN "net_pay" numeric(15, 4);

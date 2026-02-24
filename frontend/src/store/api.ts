@@ -133,6 +133,14 @@ export const api = createApi({
       }),
       invalidatesTags: ['PayStubs'],
     }),
+    updatePayStub: builder.mutation<PayStub, { id: number } & Omit<PayStub, 'id' | 'userId' | 'createdAt'>>({
+      query: ({ id, ...body }) => ({
+        url: `/pay-stubs/${id}`,
+        method: 'PUT',
+        body,
+      }),
+      invalidatesTags: ['PayStubs'],
+    }),
     deletePayStub: builder.mutation<{ ok: boolean }, number>({
       query: (id) => ({
         url: `/pay-stubs/${id}`,
@@ -204,6 +212,7 @@ export const {
   useSetPinnedBudgetsMutation,
   useGetPayStubsQuery,
   useCreatePayStubMutation,
+  useUpdatePayStubMutation,
   useDeletePayStubMutation,
   useGetPayStubSummaryQuery,
   useGetLLMConfigsQuery,

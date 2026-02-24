@@ -108,6 +108,7 @@ export const payStubs = pgTable('pay_stubs', {
   retirement:    numeric('retirement', { precision: 15, scale: 4 }).notNull().default('0'),
   employerMatch: numeric('employer_match', { precision: 15, scale: 4 }).notNull().default('0'),
   stockOptions:  numeric('stock_options', { precision: 15, scale: 4 }).notNull().default('0'),
+  netPay:        numeric('net_pay', { precision: 15, scale: 4 }),
   notes:         text('notes'),
   createdAt:     timestamp('created_at').notNull().defaultNow(),
 });
