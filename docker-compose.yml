@@ -4,7 +4,7 @@ services:
     restart: unless-stopped
     environment:
       POSTGRES_USER: budget
-      POSTGRES_PASSWORD: budget
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-budget}
       POSTGRES_DB: budget
     volumes:
       - db_data:/var/lib/postgresql/data
@@ -17,18 +17,16 @@ services:
       retries: 5
 
   app:
-    build:
-      context: .
-      dockerfile: Dockerfile
+    image: ghcr.io/elightbo/firefly-dashboard:latest
     restart: unless-stopped
     depends_on:
       db:
         condition: service_healthy
     environment:
-      DATABASE_URL: postgresql://budget:budget@db:5432/budget
+      DATABASE_URL: postgresql://budget:${DB_PASSWORD:-budget}@db:5432/budget
       FIREFLY_BASE_URL: ${FIREFLY_BASE_URL}
       FIREFLY_TOKEN: ${FIREFLY_TOKEN}
-      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY}
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
       CLAUDE_MODEL: ${CLAUDE_MODEL:-claude-sonnet-4-6}
       JWT_SECRET: ${JWT_SECRET}
       NODE_ENV: production
@@ -39,7 +37,7 @@ services:
 volumes:
   # Named volume — Docker manages the location.
   # On Unraid this lands in /var/lib/docker/volumes/ by default.
-  # If you prefer a specific path (e.g. /mnt/user/appdata/budget/db),
+  # To use a specific path instead (e.g. /mnt/user/appdata/budget/db),
   # replace with a bind mount:
   #   driver: local
   #   driver_opts:
