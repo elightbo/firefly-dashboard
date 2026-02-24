@@ -2,10 +2,9 @@ import { Navigate, Outlet } from 'react-router-dom'
 import { useGetMeQuery } from '@/store/api'
 
 export function RequireAuth() {
-  const { data: me, isLoading, isError } = useGetMeQuery()
+  const { data: me, isLoading } = useGetMeQuery()
 
   if (isLoading) return null
   if (me) return <Outlet />
-  if (isError) return <Navigate to="/login" replace />
-  return null
+  return <Navigate to="/login" replace />
 }
