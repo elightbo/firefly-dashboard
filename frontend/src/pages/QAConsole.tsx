@@ -32,9 +32,18 @@ const SUGGESTIONS = [
 const SESSION_KEY_ID   = 'chatConversationId'
 const SESSION_KEY_MSGS = 'chatMessages'
 
+function generateId(): string {
+  if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') return crypto.randomUUID()
+  // Fallback for non-secure (HTTP) contexts
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
+    const r = Math.random() * 16 | 0
+    return (c === 'x' ? r : (r & 0x3 | 0x8)).toString(16)
+  })
+}
+
 export function QAConsole() {
   const [conversationId, setConversationId] = useState<string>(
-    () => sessionStorage.getItem(SESSION_KEY_ID) ?? crypto.randomUUID(),
+    () => sessionStorage.getItem(SESSION_KEY_ID) ?? generateId(),
   )
   const [messages, setMessages] = useState<Message[]>(() => {
     try {
@@ -172,7 +181,7 @@ export function QAConsole() {
     fetch(`/api/chat/history/${conversationId}`, { method: 'DELETE' }).catch(() => {})
     sessionStorage.removeItem(SESSION_KEY_MSGS)
     sessionStorage.removeItem(SESSION_KEY_ID)
-    setConversationId(crypto.randomUUID())
+    setConversationId(generateId())
     setMessages([])
     setInput('')
     setIsStreaming(false)
