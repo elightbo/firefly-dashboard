@@ -99,20 +99,19 @@ function LLMProviderForm({
           </div>
         )}
       </div>
-      {form.provider === 'anthropic' && (
-        <div className="flex flex-col gap-1">
-          <label className="text-xs font-medium text-muted-foreground">
-            API Key {initial.apiKey === '__set__' && <span className="text-muted-foreground">(leave blank to keep existing)</span>}
-          </label>
-          <input
-            type="password"
-            value={form.apiKey}
-            onChange={e => set('apiKey', e.target.value)}
-            placeholder={initial.apiKey === '__set__' ? '••••••••' : 'sk-ant-…'}
-            className="border rounded-md px-3 py-1.5 text-sm bg-background focus:outline-none focus:ring-2 focus:ring-primary"
-          />
-        </div>
-      )}
+      <div className="flex flex-col gap-1">
+        <label className="text-xs font-medium text-muted-foreground">
+          API Key {initial.apiKey === '__set__' && <span className="text-muted-foreground">(leave blank to keep existing)</span>}
+          {form.provider === 'openai_compatible' && <span className="text-muted-foreground"> (leave blank for Ollama)</span>}
+        </label>
+        <input
+          type="password"
+          value={form.apiKey}
+          onChange={e => set('apiKey', e.target.value)}
+          placeholder={initial.apiKey === '__set__' ? '••••••••' : form.provider === 'anthropic' ? 'sk-ant-…' : 'gsk_…'}
+          className="border rounded-md px-3 py-1.5 text-sm bg-background focus:outline-none focus:ring-2 focus:ring-primary"
+        />
+      </div>
       <div className="flex gap-2 pt-1">
         <button
           onClick={() => onSave(form)}
