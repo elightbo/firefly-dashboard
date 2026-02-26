@@ -32,6 +32,11 @@ const SUGGESTIONS = [
 const SESSION_KEY_ID   = 'chatConversationId'
 const SESSION_KEY_MSGS = 'chatMessages'
 
+// Some models return HTML line breaks — normalize to markdown newlines
+function normalizeContent(text: string): string {
+  return text.replace(/<br\s*\/?>/gi, '\n')
+}
+
 function generateId(): string {
   if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') return crypto.randomUUID()
   // Fallback for non-secure (HTTP) contexts
@@ -249,7 +254,7 @@ export function QAConsole() {
                       ) : msg.role === 'assistant' ? (
                         <div className="prose prose-sm dark:prose-invert max-w-none prose-p:my-1 prose-ul:my-1 prose-ol:my-1 prose-li:my-0 prose-headings:my-2 prose-pre:my-2 prose-code:text-xs prose-pre:bg-muted prose-pre:border">
                           <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                            {msg.content}
+                            {normalizeContent(msg.content)}
                           </ReactMarkdown>
                           {msg.streaming && (
                             <span className="inline-block w-[2px] h-[14px] bg-current ml-0.5 align-middle animate-pulse" />
