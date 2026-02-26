@@ -160,7 +160,7 @@ function LLMProvidersCard() {
       provider: form.provider,
       model: form.model,
       baseUrl: form.baseUrl || undefined,
-      apiKey: form.apiKey || undefined,
+      apiKey: (form.apiKey && form.apiKey !== '__set__') ? form.apiKey : undefined,
     }).unwrap()
     setEditingId(null)
   }
