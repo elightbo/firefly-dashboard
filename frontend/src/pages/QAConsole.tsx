@@ -252,7 +252,7 @@ export function QAConsole() {
                       {msg.role === 'assistant' && msg.streaming && msg.content === '' ? (
                         <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
                       ) : msg.role === 'assistant' ? (
-                        <div className="prose prose-sm dark:prose-invert max-w-none prose-p:my-1 prose-ul:my-1 prose-ol:my-1 prose-li:my-0 prose-headings:my-2 prose-pre:my-2 prose-code:text-xs prose-pre:bg-muted prose-pre:border">
+                        <div className="prose prose-sm dark:prose-invert max-w-none overflow-x-auto prose-p:my-1 prose-ul:my-1 prose-ol:my-1 prose-li:my-0 prose-headings:my-2 prose-pre:my-2 prose-code:text-xs prose-pre:bg-muted prose-pre:border">
                           <ReactMarkdown remarkPlugins={[remarkGfm]}>
                             {normalizeContent(msg.content)}
                           </ReactMarkdown>

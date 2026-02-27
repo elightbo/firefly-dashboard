@@ -112,8 +112,15 @@ function toOpenAITools(anthropicTools: Anthropic.Tool[]): OpenAI.Chat.ChatComple
 // ---------------------------------------------------------------------------
 export async function chat(question: string): Promise<ChatResult> {
   const config = await getActiveLLMConfig();
-  if (config.provider !== 'anthropic') {
-    throw new Error(`Non-streaming chat is only supported for Anthropic. Use the streaming endpoint.`);
+
+  // For OpenAI-compatible providers, collect the streaming response into a result.
+  if (config.provider === 'openai_compatible') {
+    const result: ChatResult = { answer: '', toolsUsed: [] };
+    await chatStreamOpenAI(null, question, (event) => {
+      if (event.type === 'text') result.answer += event.text;
+      if (event.type === 'done') result.toolsUsed = event.toolsUsed;
+    }, undefined, config);
+    return result;
   }
 
   const client = new Anthropic({ apiKey: config.apiKey ?? undefined });
