@@ -1,4 +1,6 @@
 import { useState, useMemo } from 'react'
+import ReactMarkdown from 'react-markdown'
+import remarkGfm from 'remark-gfm'
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Legend, ReferenceLine, Cell } from 'recharts'
 import { Bot, Loader2 } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -363,7 +365,11 @@ export function Report() {
         </CardHeader>
         <CardContent>
           {analysis ? (
-            <p className="text-sm leading-relaxed whitespace-pre-wrap">{analysis}</p>
+            <div className="prose prose-sm dark:prose-invert max-w-none overflow-x-auto prose-p:my-1 prose-ul:my-1 prose-ol:my-1 prose-li:my-0 prose-headings:my-2 prose-pre:my-2 prose-code:text-xs prose-pre:bg-muted prose-pre:border">
+              <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                {analysis.replace(/<br\s*\/?>/gi, '\n')}
+              </ReactMarkdown>
+            </div>
           ) : (
             <p className="text-sm text-muted-foreground">
               Click "Generate Analysis" to have Claude review your spending patterns and explain the suggestions.
