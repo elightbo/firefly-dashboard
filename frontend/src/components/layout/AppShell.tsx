@@ -1,9 +1,24 @@
 import { NavLink, Outlet, useNavigate } from 'react-router-dom'
-import { LayoutDashboard, MessageSquare, TrendingUp, RefreshCw, ClipboardList, LogOut, Settings, Bookmark, Receipt, TriangleAlert, Menu, X } from 'lucide-react'
+import { LayoutDashboard, MessageSquare, TrendingUp, RefreshCw, ClipboardList, LogOut, Settings, Bookmark, Receipt, TriangleAlert, Menu, X, Sun, Moon } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useDispatch } from 'react-redux'
 import { api, useGetMeQuery, useLogoutMutation } from '@/store/api'
+
+function useDarkMode() {
+  const [dark, setDark] = useState(() => {
+    const stored = localStorage.getItem('theme')
+    if (stored) return stored === 'dark'
+    return window.matchMedia('(prefers-color-scheme: dark)').matches
+  })
+
+  useEffect(() => {
+    document.documentElement.classList.toggle('dark', dark)
+    localStorage.setItem('theme', dark ? 'dark' : 'light')
+  }, [dark])
+
+  return [dark, () => setDark(d => !d)] as const
+}
 
 const navItems = [
   { to: '/', label: 'Dashboard', icon: LayoutDashboard },
@@ -25,6 +40,7 @@ const navLinkClass = ({ isActive }: { isActive: boolean }) =>
 export function AppShell() {
   const [syncing, setSyncing] = useState(false)
   const [mobileOpen, setMobileOpen] = useState(false)
+  const [dark, toggleDark] = useDarkMode()
   const dispatch = useDispatch()
   const navigate = useNavigate()
   const { data: me } = useGetMeQuery()
@@ -68,6 +84,13 @@ export function AppShell() {
           {/* Desktop-only actions */}
           <div className="hidden md:flex items-center gap-2">
             {me && <span className="text-sm text-muted-foreground">{me.username}</span>}
+            <button
+              onClick={toggleDark}
+              className="p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+              title={dark ? 'Switch to light mode' : 'Switch to dark mode'}
+            >
+              {dark ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
+            </button>
             <NavLink to="/settings" className={navLinkClass} title="Settings">
               <Settings className="h-4 w-4" />
             </NavLink>
@@ -110,6 +133,13 @@ export function AppShell() {
             </NavLink>
           ))}
           <div className="border-t mt-2 pt-2 space-y-1">
+            <button
+              onClick={toggleDark}
+              className="w-full flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+            >
+              {dark ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
+              {dark ? 'Light mode' : 'Dark mode'}
+            </button>
             <NavLink to="/settings" className={navLinkClass} onClick={closeMobile}>
               <Settings className="h-4 w-4" />
               Settings
