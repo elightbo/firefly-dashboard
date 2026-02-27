@@ -116,3 +116,40 @@ export interface PayStubSummaryResult {
   preTaxSavingsRate: number
   byEmployer: Array<{ employer: string; gross: number; preTaxSavings: number }>
 }
+
+export interface Vehicle {
+  id: number
+  year: number
+  make: string
+  model: string
+  tags: string[]
+  mileageStart: number | null
+  mileage: number | null
+  notes: string | null
+  createdAt: string
+}
+
+export interface VehicleMonthlySpendingResult {
+  months: string[]
+  series: Array<{
+    vehicleId: number
+    label: string
+    monthly: Record<string, number>
+  }>
+}
+
+export interface VehicleSpendingResult {
+  vehicleId: number
+  period: { start: string; end: string }
+  total: number
+  costPerMile: number | null
+  transactions: Array<{
+    id: string
+    date: string
+    amount: number
+    description: string | null
+    notes: string | null
+    category: string | null
+    tags: string[]
+  }>
+}

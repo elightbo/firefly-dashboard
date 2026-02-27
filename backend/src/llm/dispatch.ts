@@ -14,6 +14,8 @@ import {
   getPayStubSummary,
   listPayStubs,
   getNetWorthHistory,
+  listVehicles,
+  getVehicleSpending,
   type Period,
 } from '../functions/index.js';
 
@@ -67,6 +69,12 @@ export async function dispatchTool(name: string, input: ToolInput): Promise<unkn
 
     case 'list_pay_stubs':
       return listPayStubs(input.limit as number | undefined);
+
+    case 'list_vehicles':
+      return listVehicles();
+
+    case 'get_vehicle_spending':
+      return getVehicleSpending(input.vehicle_id as number, input.period as Period | undefined);
 
     default:
       throw new Error(`Unknown tool: ${name}`);

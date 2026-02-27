@@ -18,6 +18,7 @@ import { authRoutes } from './routes/auth.js';
 import { adminRoutes } from './routes/admin.js';
 import { prefsRoutes } from './routes/prefs.js';
 import { payStubRoutes } from './routes/payStubs.js';
+import { vehicleRoutes } from './routes/vehicles.js';
 import { llmConfigRoutes } from './routes/llmConfigs.js';
 import bcrypt from 'bcryptjs';
 import { count } from 'drizzle-orm';
@@ -128,7 +129,8 @@ app.addHook('preHandler', async (req, reply) => {
     req.url.startsWith('/api/chat') ||
     req.url.startsWith('/api/admin') ||
     req.url.startsWith('/api/prefs') ||
-    req.url.startsWith('/api/pay-stubs');
+    req.url.startsWith('/api/pay-stubs') ||
+    req.url.startsWith('/api/vehicles');
   if (!isProtected) return;
   try {
     await req.jwtVerify({ onlyCookie: true });
@@ -143,6 +145,7 @@ await app.register(chatRoutes, { prefix: '/api' });
 await app.register(adminRoutes, { prefix: '/api' });
 await app.register(prefsRoutes, { prefix: '/api' });
 await app.register(payStubRoutes, { prefix: '/api' });
+await app.register(vehicleRoutes, { prefix: '/api' });
 await app.register(llmConfigRoutes, { prefix: '/api' });
 
 // Serve the built frontend in production (when ./public exists).

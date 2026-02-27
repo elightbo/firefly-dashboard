@@ -148,4 +148,21 @@ export const tools: Anthropic.Tool[] = [
       required: [],
     },
   },
+  {
+    name: 'list_vehicles',
+    description: 'Returns the household vehicle registry with tags and mileage. Use before calling get_vehicle_spending to get vehicle IDs.',
+    input_schema: { type: 'object', properties: {}, required: [] },
+  },
+  {
+    name: 'get_vehicle_spending',
+    description: 'Returns total spending and individual transactions (with description) for a specific vehicle across all its tags. Also returns cost per mile when mileage is set.',
+    input_schema: {
+      type: 'object',
+      properties: {
+        vehicle_id: { type: 'number', description: 'Vehicle ID from list_vehicles.' },
+        period: periodProp,
+      },
+      required: ['vehicle_id'],
+    },
+  },
 ];

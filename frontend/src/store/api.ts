@@ -14,6 +14,9 @@ import type {
   PayStub,
   PayStubSummaryResult,
   LLMConfig,
+  Vehicle,
+  VehicleSpendingResult,
+  VehicleMonthlySpendingResult,
 } from '@/types'
 
 export interface AuthUser {
@@ -25,7 +28,7 @@ export interface AuthUser {
 export const api = createApi({
   reducerPath: 'api',
   baseQuery: fetchBaseQuery({ baseUrl: '/api' }),
-  tagTypes: ['FinancialData', 'Auth', 'Prefs', 'PayStubs'],
+  tagTypes: ['FinancialData', 'Auth', 'Prefs', 'PayStubs', 'Vehicles'],
   endpoints: (builder) => ({
     getNetWorth: builder.query<NetWorthResult, void>({
       query: () => '/functions/net-worth',
@@ -187,6 +190,31 @@ export const api = createApi({
     changePassword: builder.mutation<{ ok: boolean }, { currentPassword: string; newPassword: string }>({
       query: (body) => ({ url: '/auth/password', method: 'PUT', body }),
     }),
+    getVehicles: builder.query<Vehicle[], void>({
+      query: () => '/vehicles',
+      providesTags: ['Vehicles'],
+    }),
+    createVehicle: builder.mutation<Vehicle, Omit<Vehicle, 'id' | 'createdAt'>>({
+      query: (body) => ({ url: '/vehicles', method: 'POST', body }),
+      invalidatesTags: ['Vehicles'],
+    }),
+    updateVehicle: builder.mutation<Vehicle, { id: number } & Omit<Vehicle, 'id' | 'createdAt'>>({
+      query: ({ id, ...body }) => ({ url: `/vehicles/${id}`, method: 'PUT', body }),
+      invalidatesTags: ['Vehicles'],
+    }),
+    deleteVehicle: builder.mutation<{ ok: boolean }, number>({
+      query: (id) => ({ url: `/vehicles/${id}`, method: 'DELETE' }),
+      invalidatesTags: ['Vehicles'],
+    }),
+    getVehicleSpending: builder.query<VehicleSpendingResult, { vehicleId: number; period?: Period }>({
+      query: ({ vehicleId, period = 'year_to_date' }) =>
+        `/functions/vehicle-spending?vehicleId=${vehicleId}&period=${period}`,
+      providesTags: ['FinancialData', 'Vehicles'],
+    }),
+    getVehicleMonthlySpending: builder.query<VehicleMonthlySpendingResult, number | void>({
+      query: (months = 12) => `/functions/vehicle-monthly-spending?months=${months}`,
+      providesTags: ['FinancialData', 'Vehicles'],
+    }),
   }),
 })
 
@@ -221,4 +249,10 @@ export const {
   useActivateLLMConfigMutation,
   useDeleteLLMConfigMutation,
   useChangePasswordMutation,
+  useGetVehiclesQuery,
+  useCreateVehicleMutation,
+  useUpdateVehicleMutation,
+  useDeleteVehicleMutation,
+  useGetVehicleSpendingQuery,
+  useGetVehicleMonthlySpendingQuery,
 } = api

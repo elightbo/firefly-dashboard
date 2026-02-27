@@ -1,0 +1,1 @@
+ALTER TABLE "vehicles" ADD COLUMN "mileage_start" integer;

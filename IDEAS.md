@@ -115,6 +115,99 @@ Phase 7 from the original plan — not started yet:
 
 ---
 
+## Recurring transaction detection
+
+Automatically identify subscriptions and regular bills from transaction history.
+
+**What it would do:**
+- Scan withdrawals for transactions with the same description appearing on a regular cadence (monthly, weekly, annual)
+- Surface a "Subscriptions" view showing detected recurring charges with amount and last charged date
+- Flag if a known recurring charge is missing (e.g. Netflix didn't charge this month)
+- New LLM tool: `list_recurring_transactions` — returns detected recurrings with frequency and monthly cost
+
+**Implementation sketch:**
+- Query transactions grouped by description, look for N+ occurrences with consistent spacing
+- Store detected recurrings in a `recurring_transactions` table (or compute on the fly)
+- Useful for "what subscriptions am I paying for?" Q&A
+
+---
+
+## Budget trend alerts
+
+Proactive warnings when spending pace is on track to exceed a budget limit.
+
+**What it would do:**
+- For each budget with a monthly limit, compute: (spent so far / days elapsed) × days in month = projected spend
+- Flag budgets where projection > limit (or > some threshold, e.g. 90%)
+- Show on the dashboard as a warning banner or badge on the My Budgets page
+- New LLM tool: `get_budget_alerts` — returns budgets at risk for the current month
+
+**Implementation sketch:**
+- Pure query function, no schema changes needed
+- Could add a dismissible alert card to the Dashboard
+- Threshold configurable via user preferences
+
+---
+
+## Net worth projections
+
+Simple forward trajectory based on recent savings rate.
+
+**What it would do:**
+- Take average monthly net savings over the last 3/6 months
+- Project net worth forward 1, 3, 5 years assuming that rate continues
+- Overlay on the net worth history chart as a dotted continuation line
+- New LLM tool: `get_net_worth_projection(years)` — returns projected values at key intervals
+
+**Implementation sketch:**
+- Extend the net worth history chart in Trends with a projection segment
+- Use `getNetWorthHistory` + `getMonthlyOverview` as data sources — no new schema needed
+- Could factor in known recurring expenses and expected income changes
+
+---
+
+## Firefly webhook on save
+
+Trigger a sync automatically when a transaction is created/updated in Firefly, instead of polling. Natural foundation for notifications — webhook fires → sync → alert.
+
+**What it would do:**
+- Firefly III supports webhooks — POST to a URL when transactions are created, updated, or deleted
+- Backend receives the webhook and runs a targeted sync (just the affected transaction) or a lightweight full sync
+- Near-real-time data instead of waiting for the daily cron or manual sync
+
+**Implementation sketch:**
+- Add `POST /api/webhook/firefly` endpoint — verifies Firefly's HMAC signature, enqueues/runs sync
+- Configure the webhook URL in Firefly III admin panel pointing to the tunnel URL
+- Could do a targeted upsert of just the changed transaction rather than a full re-fetch
+- Once webhook is live, hook in notification triggers (see Pushover Notifications below)
+
+---
+
+## Pushover notifications
+
+Push alerts to phone via Pushover when interesting things happen. Depends on webhook being in place for real-time triggers; daily cron can handle digest-style alerts.
+
+**Candidate triggers:**
+- Transaction over a threshold (e.g. any charge > $100) — fires on webhook
+- Budget exceeds X% of limit mid-month — fires on webhook or daily cron check
+- Large or unusual recurring charge (amount changed vs last month)
+- Daily/weekly spending digest — cron job summarizing yesterday or the past week
+- Net worth milestone crossed (e.g. every $10k increment)
+- Sync failure — so you know Firefly is unreachable
+
+**Implementation sketch:**
+- Add `PUSHOVER_USER_KEY` + `PUSHOVER_API_TOKEN` to `.env`
+- Simple `notify(title, message, priority?)` helper that POSTs to `https://api.pushover.net/1/messages.json`
+- Notification rules stored in `user_preferences` or hardcoded thresholds to start
+- Per-user opt-in (one user might want alerts, another might not)
+
+**Pushover specifics:**
+- Free tier covers personal use (up to 10k messages/month)
+- Supports priority levels: -1 (quiet), 0 (normal), 1 (high), 2 (requires acknowledgement)
+- Supports a URL in the notification — could deep-link into the dashboard
+
+---
+
 ## Misc
 
 - **System prompt tuning** — as edge cases are discovered, refine the system prompt and tool descriptions to guide Claude toward better answers

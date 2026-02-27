@@ -56,6 +56,7 @@ export async function syncTransactions(
           budgetName: journal.budget_name ?? null,
           category: journal.category_name ?? null,
           description: journal.description,
+          notes: journal.notes ?? null,
           tags: journal.tags ?? [],
           updatedAt: new Date(),
         })
@@ -70,6 +71,7 @@ export async function syncTransactions(
             budgetName: journal.budget_name ?? null,
             category: journal.category_name ?? null,
             description: journal.description,
+            notes: journal.notes ?? null,
             tags: journal.tags ?? [],
             updatedAt: new Date(),
           },

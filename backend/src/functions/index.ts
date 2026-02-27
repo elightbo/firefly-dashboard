@@ -10,4 +10,7 @@ export { getMonthlyBudgetSpending } from './getMonthlyBudgetSpending.js';
 export { getMonthlyBudgetReport } from './getMonthlyBudgetReport.js';
 export { getPayStubSummary, listPayStubs } from './getPayStubSummary.js';
 export { getNetWorthHistory } from './getNetWorthHistory.js';
+export { listVehicles } from './listVehicles.js';
+export { getVehicleSpending } from './getVehicleSpending.js';
+export { getVehicleMonthlySpending } from './getVehicleMonthlySpending.js';
 export type { Period } from './utils.js';

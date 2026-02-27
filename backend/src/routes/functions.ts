@@ -13,6 +13,8 @@ import {
   getMonthlyBudgetReport,
   getPayStubSummary,
   getNetWorthHistory,
+  getVehicleSpending,
+  getVehicleMonthlySpending,
   type Period,
 } from '../functions/index.js';
 
@@ -170,4 +172,34 @@ export async function functionRoutes(app: FastifyInstance) {
       },
     },
   }, async (req) => getPayStubSummary(req.query.period));
+
+  // GET /functions/vehicle-monthly-spending
+  app.get<{ Querystring: { months?: number } }>('/functions/vehicle-monthly-spending', {
+    schema: {
+      tags: ['Functions'],
+      summary: 'Monthly spending per vehicle for the last N months',
+      querystring: {
+        type: 'object',
+        properties: {
+          months: { type: 'integer', minimum: 1, maximum: 24, default: 12 },
+        },
+      },
+    },
+  }, async (req) => getVehicleMonthlySpending(req.query.months));
+
+  // GET /functions/vehicle-spending
+  app.get<{ Querystring: { vehicleId: string; period?: Period } }>('/functions/vehicle-spending', {
+    schema: {
+      tags: ['Functions'],
+      summary: 'Get spending for a vehicle across all its tags',
+      querystring: {
+        type: 'object',
+        required: ['vehicleId'],
+        properties: {
+          vehicleId: { type: 'string', description: 'Vehicle ID' },
+          period: periodParam,
+        },
+      },
+    },
+  }, async (req) => getVehicleSpending(parseInt(req.query.vehicleId, 10), req.query.period));
 }

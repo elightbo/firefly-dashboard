@@ -9,6 +9,7 @@ import { Report } from '@/pages/Report'
 import { Settings } from '@/pages/Settings'
 import { MyBudgets } from '@/pages/MyBudgets'
 import { PayStubs } from '@/pages/PayStubs'
+import { Vehicles } from '@/pages/Vehicles'
 
 export default function App() {
   return (
@@ -23,6 +24,7 @@ export default function App() {
           <Route path="settings" element={<Settings />} />
           <Route path="my-budgets" element={<MyBudgets />} />
           <Route path="pay-stubs" element={<PayStubs />} />
+          <Route path="vehicles" element={<Vehicles />} />
         </Route>
       </Route>
     </Routes>

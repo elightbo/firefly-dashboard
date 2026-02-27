@@ -45,6 +45,7 @@ export interface FireflyTransactionJournal {
   date: string;
   amount: string;
   description: string;
+  notes: string | null;
   source_id: number;
   destination_id: number;
   budget_id: number | null;

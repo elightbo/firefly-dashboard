@@ -1,5 +1,5 @@
 import { NavLink, Outlet, useNavigate } from 'react-router-dom'
-import { LayoutDashboard, MessageSquare, TrendingUp, RefreshCw, ClipboardList, LogOut, Settings, Bookmark, Receipt, TriangleAlert, Menu, X, Sun, Moon } from 'lucide-react'
+import { LayoutDashboard, MessageSquare, TrendingUp, RefreshCw, ClipboardList, LogOut, Settings, Bookmark, Receipt, Car, TriangleAlert, Menu, X, Sun, Moon } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useState, useEffect } from 'react'
 import { useDispatch } from 'react-redux'
@@ -27,6 +27,7 @@ const navItems = [
   { to: '/report', label: 'Report', icon: ClipboardList },
   { to: '/my-budgets', label: 'My Budgets', icon: Bookmark },
   { to: '/pay-stubs', label: 'Pay Stubs', icon: Receipt },
+  { to: '/vehicles', label: 'Garage', icon: Car },
 ]
 
 const navLinkClass = ({ isActive }: { isActive: boolean }) =>

@@ -49,6 +49,7 @@ export const transactions = pgTable('transactions', {
   budgetName: text('budget_name'),
   category: text('category'),
   description: text('description'),
+  notes: text('notes'),
   tags: text('tags').array().notNull().default([]),
   updatedAt: timestamp('updated_at').notNull().defaultNow(),
 });
@@ -124,6 +125,21 @@ export const llmConfigs = pgTable('llm_configs', {
   apiKey:    text('api_key'),            // optional for local Ollama
   model:     text('model').notNull(),
   isActive:  boolean('is_active').notNull().default(false),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+});
+
+// ---------------------------------------------------------------------------
+// Vehicles — household vehicle registry, tagged to Firefly transactions
+// ---------------------------------------------------------------------------
+export const vehicles = pgTable('vehicles', {
+  id:        serial('id').primaryKey(),
+  year:      integer('year').notNull(),
+  make:      text('make').notNull(),
+  model:     text('model').notNull(),
+  tags:         text('tags').array().notNull().default([]),  // e.g. ["fiestast"]
+  mileageStart: integer('mileage_start'),                    // odometer at start of tracking
+  mileage:      integer('mileage'),                          // current odometer (updated periodically)
+  notes:        text('notes'),
   createdAt: timestamp('created_at').notNull().defaultNow(),
 });
 
