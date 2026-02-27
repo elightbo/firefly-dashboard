@@ -134,7 +134,7 @@ export function Report() {
       `Based on: ${data.lookbackMonths.map(m => m.label).join(', ')}\n` +
       `Avg monthly income: ${formatCurrency(data.avgMonthlyIncome)}\n` +
       `Total suggested budget: ${formatCurrency(data.totalSuggestedLimits)}\n` +
-      `Projected savings rate: ${formatPct(data.projectedSavingsRate)}\n\n` +
+      `Projected savings rate: ${data.projectedSavingsRate.toFixed(1)}%\n\n` +
       `Budget breakdown:\n${budgetLines}\n\n` +
       `Identify any concerns, trends worth watching, and whether the suggested limits are realistic. ` +
       `Do not call any tools — all the data you need is above.`
