@@ -1,10 +1,10 @@
 import { useState, useMemo } from 'react'
-import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Legend } from 'recharts'
+import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Legend, ReferenceLine, Cell } from 'recharts'
 import { Bot, Loader2 } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
-import { useGetMonthlyBudgetReportQuery, useChatMutation } from '@/store/api'
-import { formatCurrency, formatPct } from '@/lib/format'
+import { useGetMonthlyBudgetReportQuery, useChatMutation, useGetMonthlyOverviewQuery } from '@/store/api'
+import { formatCurrency } from '@/lib/format'
 
 function toYYYYMM(d: Date): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
@@ -37,6 +37,78 @@ const LOOKBACK_OPTIONS = [
   { value: 6, label: '6 months' },
   { value: 12, label: '12 months' },
 ]
+
+const SAVINGS_WINDOWS = [3, 6, 12]
+
+function SavingsRateCard() {
+  const [window, setWindow] = useState(3)
+  const { data: overview } = useGetMonthlyOverviewQuery(12)
+
+  const { avg, months } = useMemo(() => {
+    if (!overview || overview.length === 0) return { avg: null, months: [] }
+    const slice = overview.slice(-window)
+    const avg = slice.reduce((s, p) => s + p.savingsRate, 0) / slice.length
+    return { avg, months: slice }
+  }, [overview, window])
+
+  const avgColor = avg === null ? '' : avg >= 20 ? 'text-emerald-600' : avg >= 10 ? 'text-amber-500' : 'text-red-500'
+
+  return (
+    <Card>
+      <CardHeader className="pb-2">
+        <div className="flex items-center justify-between">
+          <CardTitle className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+            Avg Savings Rate
+          </CardTitle>
+          <div className="flex gap-1">
+            {SAVINGS_WINDOWS.map(w => (
+              <button
+                key={w}
+                onClick={() => setWindow(w)}
+                className={`text-xs px-2 py-0.5 rounded-md transition-colors ${
+                  window === w
+                    ? 'bg-primary text-primary-foreground'
+                    : 'text-muted-foreground hover:text-foreground hover:bg-muted'
+                }`}
+              >
+                {w}mo
+              </button>
+            ))}
+          </div>
+        </div>
+      </CardHeader>
+      <CardContent>
+        <p className={`text-3xl font-bold ${avgColor}`}>
+          {avg !== null ? `${avg.toFixed(1)}%` : '—'}
+        </p>
+        <p className="text-xs text-muted-foreground mt-0.5 mb-3">
+          average over last {window} months
+        </p>
+        {months.length > 0 && (
+          <ResponsiveContainer width="100%" height={64}>
+            <BarChart data={months.map(p => ({ month: p.month.slice(5), rate: p.savingsRate }))}
+              margin={{ top: 0, right: 0, left: 0, bottom: 0 }} barSize={18}>
+              <XAxis dataKey="month" tick={{ fontSize: 10 }} tickLine={false} axisLine={false} />
+              <Tooltip
+                formatter={(v) => [`${Number(v).toFixed(1)}%`, 'Savings Rate']}
+                cursor={{ fill: 'hsl(var(--muted))' }}
+              />
+              {avg !== null && <ReferenceLine y={avg} stroke="#6366f1" strokeDasharray="3 3" strokeWidth={1.5} />}
+              <Bar dataKey="rate" radius={[3, 3, 0, 0]}>
+                {months.map((p, i) => (
+                  <Cell
+                    key={i}
+                    fill={p.savingsRate >= 20 ? '#22c55e' : p.savingsRate >= 10 ? '#f97316' : '#f43f5e'}
+                  />
+                ))}
+              </Bar>
+            </BarChart>
+          </ResponsiveContainer>
+        )}
+      </CardContent>
+    </Card>
+  )
+}
 
 export function Report() {
   const monthOptions = useMemo(buildMonthOptions, [])
@@ -98,12 +170,6 @@ export function Report() {
       'Current Limit': b.currentLimit ?? 0,
     }))
 
-  const savingsRateColor = data.projectedSavingsRate >= 20
-    ? 'text-emerald-600'
-    : data.projectedSavingsRate >= 10
-      ? 'text-amber-500'
-      : 'text-red-500'
-
   return (
     <div className="space-y-6 max-w-5xl">
       <div className="flex flex-wrap items-end justify-between gap-4">
@@ -143,7 +209,7 @@ export function Report() {
       </div>
 
       {/* Summary cards */}
-      <div className="grid grid-cols-3 gap-4">
+      <div className="grid grid-cols-2 gap-4">
         <Card>
           <CardHeader className="pb-1">
             <CardTitle className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Avg Monthly Income</CardTitle>
@@ -164,18 +230,9 @@ export function Report() {
             </p>
           </CardContent>
         </Card>
-        <Card>
-          <CardHeader className="pb-1">
-            <CardTitle className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Projected Savings Rate</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className={`text-2xl font-bold ${savingsRateColor}`}>
-              {formatPct(data.projectedSavingsRate)}
-            </p>
-            <p className="text-xs text-muted-foreground mt-0.5">if suggested limits are followed</p>
-          </CardContent>
-        </Card>
       </div>
+
+      <SavingsRateCard />
 
       {/* Chart */}
       <Card>
