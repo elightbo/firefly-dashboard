@@ -25,3 +25,8 @@ pnpm-debug.log*
 !.vscode/extensions.json
 .idea/
 .DS_Store
+
+# Beads / Dolt files (added by bd init)
+.dolt/
+*.db
+.beads-credential-key

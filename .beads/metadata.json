@@ -1,0 +1,7 @@
+{
+  "database": "dolt",
+  "backend": "dolt",
+  "dolt_mode": "embedded",
+  "dolt_database": "budget",
+  "project_id": "23c4ce6e-65eb-4022-af14-65a86db8d24e"
+}
