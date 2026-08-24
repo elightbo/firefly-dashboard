@@ -6,7 +6,7 @@ WORKDIR /frontend
 
 RUN corepack enable pnpm
 
-COPY frontend/package.json frontend/pnpm-lock.yaml ./
+COPY frontend/package.json frontend/pnpm-lock.yaml frontend/pnpm-workspace.yaml ./
 RUN pnpm install --frozen-lockfile
 
 COPY frontend/ .
@@ -20,7 +20,7 @@ WORKDIR /backend
 
 RUN corepack enable pnpm
 
-COPY backend/package.json backend/pnpm-lock.yaml ./
+COPY backend/package.json backend/pnpm-lock.yaml backend/pnpm-workspace.yaml ./
 RUN pnpm install --frozen-lockfile
 
 COPY backend/ .
@@ -35,7 +35,7 @@ WORKDIR /app
 RUN corepack enable pnpm
 
 # Production dependencies only
-COPY backend/package.json backend/pnpm-lock.yaml ./
+COPY backend/package.json backend/pnpm-lock.yaml backend/pnpm-workspace.yaml ./
 RUN pnpm install --frozen-lockfile --prod
 
 # Compiled backend
