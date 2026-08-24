@@ -42,7 +42,7 @@ export async function backfillNetWorth(): Promise<number> {
   const allAccounts = await db
     .select({ id: accounts.id, balance: accounts.balance })
     .from(accounts)
-    .where(inArray(accounts.type, ['asset', 'liabilities']));
+    .where(and(inArray(accounts.type, ['asset', 'liabilities']), eq(accounts.active, true)));
 
   if (allAccounts.length === 0) return 0;
 
