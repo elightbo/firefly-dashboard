@@ -15,7 +15,7 @@ export async function getNetWorth(): Promise<NetWorthResult> {
   const allAccounts = await db
     .select({ id: accounts.id, name: accounts.name, type: accounts.type, balance: accounts.balance })
     .from(accounts)
-    .where(inArray(accounts.type, ['asset', 'liabilities']));
+    .where(and(inArray(accounts.type, ['asset', 'liabilities']), eq(accounts.active, true)));
 
   const total = allAccounts.reduce((s, a) => s + toNum(a.balance), 0);
   const assetIds = allAccounts.filter(a => a.type === 'asset').map(a => a.id);
